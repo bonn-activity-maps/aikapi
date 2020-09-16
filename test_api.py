@@ -6,5 +6,6 @@ dataset_name = '181129'
 
 aik = AIK(dataset_dir, dataset_name)
 
-print(aik.get_calibration_params(3, 25894))
-# print(aik.get_persons_in_frame(0))
+# print(aik.get_calibration_params(3, 25894))
+print(aik.get_persons_in_frame(380))
+# print(aik.get_person_in_frame(380, 1))

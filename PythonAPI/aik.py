@@ -35,7 +35,7 @@ class AIK:
 
         # Load info to memory
         self.calibration_params = self.read_calibration_params()
-        # self.persons, objects, actions = self.read_annotations()
+        self.persons, objects, actions = self.read_annotations()
 
     def unroll_videos(self, img_format):
         '''
@@ -96,19 +96,38 @@ class AIK:
         with open(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json')) as f:
             json_data = json.load(f)
 
+        print('Loading persons...')
         # Separate data into persons, objects and actions
         # Convert into a list ordered by frame
+        last_frame = 0
         for d in json_data['persons']:
+            frame = d['frame']
+            # print(frame)
+
+            # Complete if there are empty frames in between
+            if frame > last_frame + 1:
+                for i in range(last_frame+1, frame):
+                    persons.append([])
+
+            # Add persons in current frame
+            persons_in_frame = d['persons']
+            persons.append(persons_in_frame)
+            last_frame = frame
+            # if int(d['frame']) >= 25:
+            #     print(len(persons))
+            #     print(persons)
+            #     exit()
             # print(d['frame'])
             # print('_________________________________')
-            persons.append(d['frame'])
+        # print(persons)
 
-        for d in json_data['objects']:
-            objects.append(d)
-
-        # TODO: check how to process actions
-        for d in json_data['actions']:
-            actions.append(d)
+        del json_data['persons']
+        # for d in json_data['objects']:
+        #     objects.append(d)
+        #
+        # # TODO: check how to process actions
+        # for d in json_data['actions']:
+        #     actions.append(d)
         return persons, objects, actions
 
     def get_calibration_params(self, video, frame):
@@ -127,6 +146,24 @@ class AIK:
         :return: Persons in json format
         '''
         return self.persons[frame]
+
+    # TODO: check types in export
+
+    def get_person_in_frame(self, frame, person_id):
+        '''
+        Get annotation for person_id in given frame.
+        :param frame (int): frame number
+        :param person_id (int): person identifier
+        :return: Person in json format if exists, info message otherwise
+        '''
+        frame_annotation = self.persons[frame]
+        for a in frame_annotation:
+            if a['pid'] == person_id:
+                return a['location']
+
+        return 'Person ' + person_id + ' is not annotated in frame ' + frame
+
+
 
 
 
