@@ -4,6 +4,7 @@ import os
 import subprocess
 import json
 import numpy as np
+import cv2
 
 class AIK:
 
@@ -34,8 +35,8 @@ class AIK:
             self.unroll_videos(image_format)
 
         # Load info to memory
-        self.calibration_params = self.read_calibration_params()
-        self.persons, objects, actions = self.read_annotations()
+        self.calibration_params = self._read_calibration_params()
+        self.persons, objects, actions = self._read_annotations()
 
     def unroll_videos(self, img_format):
         '''
@@ -58,7 +59,7 @@ class AIK:
                                      os.path.join(camera_dir, self.frame_format+"."+img_format)])
             # print("The exit code was: %d" % unroll.returncode)
 
-    def read_calibration_params(self):
+    def _read_calibration_params(self):
         '''
         Read camera calibration parameters for each camera.
         :return: Array with all calibration parameters
@@ -84,7 +85,7 @@ class AIK:
             cameras_data.append(camera_params)
         return np.array(cameras_data)
 
-    def read_annotations(self):
+    def _read_annotations(self):
         '''
         Read persons, objects and actions information from file.
         :return: Persons, objects and actions in json format
@@ -163,7 +164,35 @@ class AIK:
 
         return 'Person ' + person_id + ' is not annotated in frame ' + frame
 
+    def get_images_in_frame(self, frame):
+        '''
+        Get camera images corresponding to the frame.
+        :param frame (int): frame number
+        :return: Array with images in numpy_array format if the frame exists, info message otherwise
+        '''
 
+        print("Searching for images of frame ", frame, "...")
+        # Create the string of the name of the frame that we are going to search for in all camera folders
+        frame_name = "frame" + ''.zfill(9)
+        frame_string = str(frame)
+        number_of_chars = len(frame_string)
+        frame_name = frame_name[:-number_of_chars] + frame_string + ".png"
+        
+        print("Frame name: " + frame_name)
+
+        # Get the paths to all cameras inside the videos folder
+        cameras_paths = [os.path.join(self.videos_dir, name) for name in os.listdir(self.videos_dir) if os.path.isdir(os.path.join(self.videos_dir,name))]
+        
+        # Get the frame_name image from those paths
+        images = []
+
+        for path in cameras_paths:
+            image = cv2.imread(os.path.join(path, frame_name), cv2.IMREAD_COLOR)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            images.append(image)
+
+        print("Images of frame ", frame, " retrieved.")
+        return images
 
 
 
