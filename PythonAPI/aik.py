@@ -20,14 +20,15 @@ class AIK:
         self.cameras_dir = os.path.join(self.dataset_dir, 'cameras')
         self.videos_dir = os.path.join(self.dataset_dir, 'videos')
 
-        self.num_cameras = 12
-        self.frame_format = "frame%09d"
-
         # Check if dataset exists in the directory
         assert os.path.isdir(self.dataset_dir), "The dataset directory %r does not exist" % dataset_dir
-        assert os.path.isdir(self.cameras_dir), "The dataset is not complete"
+        assert os.path.isdir(self.cameras_dir), "The dataset is not complete, cameras information is missing"
 
         assert image_format in ['png', 'jpeg'], "The image format should be png or jpeg"
+
+        self.num_cameras = self._read_dataset_info()
+        self.frame_format = "frame%09d"
+        self.max_persons = 50
 
         # Create videos directory and unroll videos if the directory videos does not exist
         if not os.path.exists(self.videos_dir):
@@ -36,7 +37,7 @@ class AIK:
 
         # Load info to memory
         self.calibration_params = self._read_calibration_params()
-        self.persons, objects, actions = self._read_annotations()
+        self.persons, self.objects, self.activities = self._read_annotations()
 
     def unroll_videos(self, img_format):
         '''
@@ -59,10 +60,23 @@ class AIK:
                                      os.path.join(camera_dir, self.frame_format+"."+img_format)])
             # print("The exit code was: %d" % unroll.returncode)
 
+    def _read_dataset_info(self):
+        '''
+        Read general dataset information.
+        :return: Number of cameras
+        '''
+        print('Reading dataset information...')
+        dataset_file = os.path.join(self.dataset_dir, 'dataset.json')
+        assert os.path.isfile(dataset_file), "The dataset is not complete, the dataset.json file is missing"
+
+        with open(dataset_file) as f:
+            data = json.load(f)
+        return data['n_cameras']
+
     def _read_calibration_params(self):
         '''
         Read camera calibration parameters for each camera.
-        :return: Array with all calibration parameters
+        :return: Numpy array with all calibration parameters
         '''
         print('Loading calibration parameters...')
         cameras_data = []
@@ -88,22 +102,38 @@ class AIK:
     def _read_annotations(self):
         '''
         Read persons, objects and actions information from file.
-        :return: Persons, objects and actions in json format
+        :return: Persons, objects and activities numpy arrays with information in json format
         '''
         print('Loading annotations...')
-        persons = []
-        objects = []
-        actions = []
         with open(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json')) as f:
             json_data = json.load(f)
 
-        print('Loading persons...')
-        # Separate data into persons, objects and actions
-        # Convert into a list ordered by frame
-        last_frame = 0
-        for d in json_data['persons']:
+        # Process and separate data into persons, objects and activities
+        persons = self._process_persons(json_data['persons'])
+        del json_data['persons']
+
+        # print('Processing objects...')
+        objects = []
+        # for d in json_data['objects']:
+        #     objects.append(d)
+        del json_data['objects']
+
+        activities = self._process_activities(json_data['actions'])
+        del json_data['actions']
+
+        return persons, objects, activities
+
+    def _process_persons(self, persons_json):
+        '''
+        Process persons json and order by frame.
+        :param persons_json : json with persons information
+        :return: numpy array with person info in json format for each frame
+        '''
+        print('Processing persons...')
+        persons = []
+        last_frame = -1
+        for d in persons_json:
             frame = d['frame']
-            # print(frame)
 
             # Complete if there are empty frames in between
             if frame > last_frame + 1:
@@ -114,22 +144,22 @@ class AIK:
             persons_in_frame = d['persons']
             persons.append(persons_in_frame)
             last_frame = frame
-            # if int(d['frame']) >= 25:
-            #     print(len(persons))
-            #     print(persons)
-            #     exit()
-            # print(d['frame'])
-            # print('_________________________________')
-        # print(persons)
+        return np.array(persons)
 
-        del json_data['persons']
-        # for d in json_data['objects']:
-        #     objects.append(d)
-        #
-        # # TODO: check how to process actions
-        # for d in json_data['actions']:
-        #     actions.append(d)
-        return persons, objects, actions
+    def _process_activities(self, activities_json):
+        '''
+        Process activities json and order by person id.
+        :param activities_json : json with activities information
+        :return: array with activities info ordered by person id
+        '''
+        print('Processing actions...')
+        activities = [[] for i in range(self.max_persons)]  # Initialize with empty activities
+
+        for d in activities_json:
+            pid = d['pid']
+            del d['pid']
+            activities[pid].append(d)
+        return np.array(activities)
 
     def get_calibration_params(self, video, frame):
         '''
@@ -161,8 +191,15 @@ class AIK:
         for a in frame_annotation:
             if a['pid'] == person_id:
                 return a['location']
-
         return 'Person ' + person_id + ' is not annotated in frame ' + frame
+
+    def get_activities_for_person(self, pid):
+        '''
+        Get all activities annotated for person with pid.
+        :param pid (int): person identifier
+        :return: Numpy array with activities in json format
+        '''
+        return self.activities[pid]
 
     def get_images_in_frame(self, frame):
         '''
@@ -193,8 +230,6 @@ class AIK:
 
         print("Images of frame ", frame, " retrieved.")
         return images
-
-
 
 
 
