@@ -89,7 +89,7 @@ class AIK:
     def _read_calibration_params(self):
         '''
         Read camera calibration parameters for each camera.
-        :return: Numpy array with all calibration parameters
+        :return: Numpy array with calibration parameters
         '''
         print('Loading calibration parameters...')
         cameras_data = []
@@ -100,16 +100,16 @@ class AIK:
             with open(os.path.join(self.cameras_dir, camera)) as f:
                 data = json.load(f)
 
-            # Store data for each frame in numpy array
-            camera_params = np.empty(0)
-            for d in data:
-                frames = d['end_frame'] - d['start_frame']
-                del d['start_frame']
-                del d['end_frame']
-                cam = np.full(frames, d)
-                camera_params = np.append(camera_params, cam, axis=0)
-
-            cameras_data.append(camera_params)
+            # # Store data for each frame in numpy array
+            # camera_params = np.empty(0)
+            # for d in data:
+            #     frames = d['end_frame'] - d['start_frame']
+            #     del d['start_frame']
+            #     del d['end_frame']
+            #     cam = np.full(frames, d)
+            #     camera_params = np.append(camera_params, cam, axis=0)
+            #
+            cameras_data.append(data)
         return np.array(cameras_data)
 
     def _read_annotations(self):
@@ -174,6 +174,21 @@ class AIK:
             activities[pid].append(d)
         return np.array(activities)
 
+    def _get_real_frame(self, frame):
+        '''
+        Get the real frames or frames that need to be interpolated
+        :param frame: number of frame
+        :return: True if the dataset contains the info about the frame, False if we have to interpolate.
+                The real frame if it is stored in the dataset
+                The previous and posterior frames if the information about that frame is not stored
+        '''
+        # Even -> the frame info is not contained in the dataset
+        if (frame % 2) == 0:
+            real_frame = frame//2
+            return False, real_frame, real_frame+1
+        else:     # Odd -> return real frame
+            return True, frame//2 + 1, -1
+
     def get_calibration_params(self, video, frame):
         '''
         Get calibration parameters that satisfy given filter conditions.
@@ -181,7 +196,13 @@ class AIK:
         :param frame (int): frame number
         :return: calibration parameters in json format with K, rvec, tvec, distCoef, w and h
         '''
-        return self.calibration_params[video, frame]
+        _, real_frame, _ = self._get_real_frame(frame)
+        for p in self.calibration_params[video]:
+            _, real_start_frame, _ = self._get_real_frame(p['start_frame'])
+            _, real_end_frame, _ = self._get_real_frame(p['end_frame'])
+            if real_start_frame <= real_frame <= real_end_frame:
+                return p
+        return 'Frame ' + str(frame) + ' does not exist in dataset ' + self.dataset_name
 
     def get_persons_in_frame(self, frame):
         '''
