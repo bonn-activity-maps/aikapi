@@ -204,13 +204,46 @@ class AIK:
                 return p
         return 'Frame ' + str(frame) + ' does not exist in dataset ' + self.dataset_name
 
+    def _interpolate(self, kps1, kps2):
+        '''
+            Interpolate all keypoints the frame in between kps1 and kps2
+        :param kps1: keypoints from first frame
+        :param kps2: keypoints from second frame
+        :return: list with interpolated keypoints
+        '''
+        interpolated_kps = []
+        for i in range(len(kps1)):
+            # If one of the two points is empty -> Not interpolate
+            if len(kps1[i]) != 0 and len(kps2[i]) != 0:
+                interpolated_coords = np.linspace(np.array(kps1[i]), np.array(kps2[i]), num=3).tolist()
+                interpolated_kps.append(interpolated_coords[1])
+            else:
+                interpolated_kps.append([])
+        return interpolated_kps
+
     def get_persons_in_frame(self, frame):
         '''
-        Get all persons annotated in given frame.
+        Get all persons annotated in given frame. Interpolate keypoints if the frame is not annotated
         :param frame (int): frame number
         :return: Persons in json format
         '''
-        return self.persons[frame]
+        annotated, real_frame, next_frame = self._get_real_frame(frame)
+        if annotated:
+            return np.array(self.persons[real_frame])
+        else:
+            persons = []
+            # Interpolate all persons
+            for p1 in self.persons[real_frame]:
+                for p2 in self.persons[next_frame]:
+                    if p1['pid'] == p2['pid'] and len(p1['location']) == len(p2['location']):
+                        interpolated_person = self._interpolate(p1['location'], p2['location'])
+                        person_json = {
+                            'pid': p1['pid'],
+                            'location': interpolated_person
+                        }
+                        persons.append(person_json)
+                        break
+            return np.array(persons)
 
     # TODO: check types in export
 
@@ -221,11 +254,30 @@ class AIK:
         :param person_id (int): person identifier
         :return: Person in json format if exists, info message otherwise
         '''
-        frame_annotation = self.persons[frame]
-        for a in frame_annotation:
-            if a['pid'] == person_id:
-                return a['location']
-        return 'Person ' + person_id + ' is not annotated in frame ' + frame
+        annotated, real_frame, next_frame = self._get_real_frame(frame)
+        if annotated:
+            frame_annotation = self.persons[real_frame]
+            for a in frame_annotation:
+                if a['pid'] == person_id:
+                    return a['location']
+        else:
+            p1, p2 = [], []
+            # Search keypoints in previous and next frame to interpolate
+            frame_annotation = self.persons[real_frame]
+            for a in frame_annotation:
+                if a['pid'] == person_id:
+                    p1 = a['location']
+                    break
+            frame_annotation = self.persons[next_frame]
+            for a in frame_annotation:
+                if a['pid'] == person_id:
+                    p2 = a['location']
+                    break
+            # Interpolate only if the person exists in both frames
+            if p1 and p2:
+                return self._interpolate(p1, p2)
+
+        return 'Person ' + str(person_id) + ' is not annotated in frame ' + str(frame)
 
     def get_activities_for_person(self, pid):
         '''
