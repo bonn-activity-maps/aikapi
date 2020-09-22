@@ -5,6 +5,7 @@ import subprocess
 import json
 import numpy as np
 import cv2
+import shutil
 
 class AIK:
 
@@ -34,10 +35,22 @@ class AIK:
         if not os.path.exists(self.videos_dir):
             os.mkdir(self.videos_dir)
             self.unroll_videos(image_format)
+        # If the image format has changed, remove frames and unroll again
+        elif os.path.splitext(os.listdir(os.path.join(self.videos_dir, 'camera00'))[0])[1].split('.')[1] != image_format:
+            print('The image format has changed.')
+            print('    Removing old files...')
+            try:
+                shutil.rmtree(self.videos_dir)
+            except OSError as e:
+                print("Error: %s : %s" % (self.videos_dir, e.strerror))
+            os.mkdir(self.videos_dir)
+            self.unroll_videos(image_format)
+
 
         # Load info to memory
         self.calibration_params = self._read_calibration_params()
         self.persons, self.objects, self.activities = self._read_annotations()
+        print('Finish loading dataset')
 
     def unroll_videos(self, img_format):
         '''
