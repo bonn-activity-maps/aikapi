@@ -191,17 +191,19 @@ class AIK:
 
     def get_calibration_params(self, video, frame):
         '''
-        Get calibration parameters that satisfy given filter conditions.
+        Get calibration parameters that satisfy given filter conditions. Multiply x2-1 in order to get upsampled frames in range
         :param video (int): video number
         :param frame (int): frame number
         :return: calibration parameters in json format with K, rvec, tvec, distCoef, w and h
         '''
-        _, real_frame, _ = self._get_real_frame(frame)
         for p in self.calibration_params[video]:
-            _, real_start_frame, _ = self._get_real_frame(p['start_frame'])
-            _, real_end_frame, _ = self._get_real_frame(p['end_frame'])
-            if real_start_frame <= real_frame <= real_end_frame:
-                return p
+            start_frame = p['start_frame'] * 2 - 1
+            end_frame = p['end_frame'] * 2 - 1
+            if start_frame <= frame <= end_frame:
+                new_params = p.copy()
+                new_params['start_frame'] = start_frame
+                new_params['end_frame'] = end_frame
+                return new_params
         return 'Frame ' + str(frame) + ' does not exist in dataset ' + self.dataset_name
 
     def _interpolate(self, kps1, kps2):
@@ -281,11 +283,17 @@ class AIK:
 
     def get_activities_for_person(self, pid):
         '''
-        Get all activities annotated for person with pid.
+        Get all activities annotated for person with pid. Multiply ranges x2-1 in order to get correct ranges
         :param pid (int): person identifier
         :return: Numpy array with activities in json format
         '''
-        return self.activities[pid]
+        activities = []
+        for a in self.activities[pid]:
+            new_activity = a.copy()
+            new_activity['start_frame'] = new_activity['start_frame'] * 2 - 1
+            new_activity['end_frame'] = new_activity['end_frame'] * 2 - 1
+            activities.append(new_activity)
+        return np.array(activities)
 
     def get_images_in_frame(self, frame):
         '''
