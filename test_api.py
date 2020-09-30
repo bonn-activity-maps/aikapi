@@ -7,9 +7,11 @@ dataset_name = '181129'
 
 aik = AIK(dataset_dir, dataset_name, image_format='png')
 
-print(aik.get_calibration_params(3, 1))
+# print(aik.get_calibration_params(3, 1))
 # print(aik.get_persons_in_frame(800))
 # print(aik.get_person_in_frame(800, 1))
 
-# print(aik.get_images_in_frame(1))
 # print(aik.get_activities_for_person(2))
+
+# print(aik.get_images_in_frame(1))
+aik.unroll_videos(force=True, video=1)

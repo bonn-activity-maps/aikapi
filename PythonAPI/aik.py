@@ -26,52 +26,93 @@ class AIK:
         assert os.path.isdir(self.cameras_dir), "The dataset is not complete, cameras information is missing"
 
         assert image_format in ['png', 'jpeg'], "The image format should be png or jpeg"
+        self.image_format = image_format
 
         self.num_cameras = self._read_dataset_info()
         self.frame_format = "frame%09d"
         self.max_persons = 50
-
-        # Create videos directory and unroll videos if the directory videos does not exist
-        if not os.path.exists(self.videos_dir):
-            os.mkdir(self.videos_dir)
-            self.unroll_videos(image_format)
-        # If the image format has changed, remove frames and unroll again
-        elif os.path.splitext(os.listdir(os.path.join(self.videos_dir, 'camera00'))[0])[1].split('.')[1] != image_format:
-            print('The image format has changed.')
-            print('    Removing old files...')
-            try:
-                shutil.rmtree(self.videos_dir)
-            except OSError as e:
-                print("Error: %s : %s" % (self.videos_dir, e.strerror))
-            os.mkdir(self.videos_dir)
-            self.unroll_videos(image_format)
-
 
         # Load info to memory
         self.calibration_params = self._read_calibration_params()
         self.persons, self.objects, self.activities = self._read_annotations()
         print('Finish loading dataset')
 
-    def unroll_videos(self, img_format):
+    def _unroll_video(self, video):
+        '''
+        Unroll video in its corresponding folder. Create cameraXX folder
+        :param video: number of video
+        '''
+        video_file = self.dataset_name + '_' + str(video).zfill(2) + '.mp4'
+
+        # Create camera directory to store all frames
+        camera = 'camera' + str(video).zfill(2)
+        camera_dir = os.path.join(self.videos_dir, camera)
+        os.mkdir(camera_dir)
+
+        if self.image_format == 'jpeg':
+            unroll = subprocess.run(["ffmpeg", "-i", os.path.join(self.dataset_dir, video_file), "-qscale:v", "2",
+                                     os.path.join(camera_dir, self.frame_format + "." + self.image_format)])
+        else:
+            unroll = subprocess.run(["ffmpeg", "-i", os.path.join(self.dataset_dir, video_file),
+                                     os.path.join(camera_dir, self.frame_format + "." + self.image_format)])
+        # print("The exit code was: %d" % unroll.returncode)
+
+    def unroll_videos(self, force=False, video=None):
         '''
         Unroll all the videos and store them in the videos folder. This folder contains 12 folders (cameraXX) with
         the unrolled frames from each camera.
-        :param img_format (str): format of images to extract video frames, png or jpeg
+        Create videos folder if it doesn't exist.
+        :param force: if True, the unrolled frames are deleted and the videos are unrolled again
+        :param video: if None all videos are unrolled.
+                      If it has a concrete value, only that video is unrolled
         :return:
         '''
-        print('Unrolling videos. This may take a while...')
 
-        for c in range(self.num_cameras):
-            video = self.dataset_name + '_' + str(c).zfill(2) + '.mp4'
+        # Remove folders
+        if force:
+            if video is None:   # remove videos folder
+                try:
+                    shutil.rmtree(self.videos_dir)
+                except OSError as e:
+                    print("Error: %s : %s" % (self.videos_dir, e.strerror))
+                os.mkdir(self.videos_dir)
+            else:               # Only remove corresponding camera folder
+                camera = 'camera' + str(video).zfill(2)
+                camera_dir = os.path.join(self.videos_dir, camera)
+                try:
+                    shutil.rmtree(camera_dir)
+                except OSError as e:
+                    print("Error: %s : %s" % (camera_dir, e.strerror))
+        else:
+            # Create videos directory and unroll videos if the directory videos does not exist
+            if not os.path.exists(self.videos_dir):
+                os.mkdir(self.videos_dir)
+            # Inform the user if the image format is different
+            elif os.path.splitext(os.listdir(os.path.join(self.videos_dir, os.listdir(self.videos_dir)[0]))[0])[1].split('.')[1] != self.image_format:
+                print("The image format is different from the unrolled frames. "
+                      "If you want to unroll them again and overwrite the current frames, "
+                      "please use the option force=True")
+                return
+            elif video is None:     # If videos are already unrolled and not force
+                print("The videos are already unrolled. If you want to unroll them again and overwrite the current frames, "
+                      "please use the option force=True")
+                return
+            else:                   # If we want to unroll 1 video
+                camera = 'camera' + str(video).zfill(2)
+                if camera in os.listdir(self.videos_dir):
+                    print("Video", video, "is already unrolled. If you want to unroll it again and overwrite"
+                                          " the current frames, please use the option force=True")
+                    return
 
-            # Create camera directory to store all frames
-            camera = 'camera' + str(c).zfill(2)
-            camera_dir = os.path.join(self.videos_dir, camera)
-            os.mkdir(camera_dir)
-
-            unroll = subprocess.run(["ffmpeg", "-i", os.path.join(self.dataset_dir, video),
-                                     os.path.join(camera_dir, self.frame_format+"."+img_format)])
-            # print("The exit code was: %d" % unroll.returncode)
+        # Unroll videos
+        if video is None:   # Unroll all videos if none
+            print('Unrolling videos. This may take a while...')
+            for c in range(self.num_cameras):
+                self._unroll_video(c)
+        else:               # Unroll concrete video
+            assert 0 <= int(video) <= self.num_cameras, "The should be between 0 and %r" % self.num_cameras
+            print('Unrolling video', video, '. This may take a while...')
+            self._unroll_video(int(video))
 
     def _read_dataset_info(self):
         '''
@@ -302,12 +343,16 @@ class AIK:
         :return: Array with images in numpy_array format if the frame exists, info message otherwise
         '''
 
+        # Check if it's the first time the frames are requested and the videos are not unrolled
+        if not os.path.exists(self.videos_dir):
+            self.unroll_videos()
+
         print("Searching for images of frame ", frame, "...")
         # Create the string of the name of the frame that we are going to search for in all camera folders
         frame_name = "frame" + ''.zfill(9)
         frame_string = str(frame)
         number_of_chars = len(frame_string)
-        frame_name = frame_name[:-number_of_chars] + frame_string + ".png"
+        frame_name = frame_name[:-number_of_chars] + frame_string + "." + self.image_format
         
         print("Frame name: " + frame_name)
 
