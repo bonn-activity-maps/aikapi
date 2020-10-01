@@ -6,6 +6,7 @@ import json
 import numpy as np
 import cv2
 import shutil
+from PythonAPI.utils.camera import Camera
 
 class AIK:
 
@@ -230,7 +231,7 @@ class AIK:
         else:     # Odd -> return real frame
             return True, frame//2 + 1, -1
 
-    def get_calibration_params(self, video, frame):
+    def _get_calibration_params(self, video, frame):
         '''
         Get calibration parameters that satisfy given filter conditions. Multiply x2-1 in order to get upsampled frames in range
         :param video (int): video number
@@ -244,8 +245,29 @@ class AIK:
                 new_params = p.copy()
                 new_params['start_frame'] = start_frame
                 new_params['end_frame'] = end_frame
-                return new_params
-        return 'Frame ' + str(frame) + ' does not exist in dataset ' + self.dataset_name
+                return (True,new_params)
+        return (False,'Frame ' + str(frame) + ' does not exist in dataset ' + self.dataset_name)
+    
+    def get_camera(self, video, frame):
+        '''
+        Get Camera for specified video and frame. Multiply x2-1 in order to get upsampled frames in range
+        :param video (int): video number
+        :param frame (int): frame number
+        :return: Camera object
+        '''
+        params = self._get_calibration_params(video, frame)
+        # Check if we found the camera parameters
+        if not (params[0]):
+            print(params[1])
+            return
+        else:
+            params = params[1]
+            
+        # Construct the Camera object
+        camera = Camera(params['K'], params['rvec'], params['tvec'], params['distCoef'], params['w'], params['h'])
+
+        # Return the camera
+        return camera
 
     def _interpolate(self, kps1, kps2):
         '''

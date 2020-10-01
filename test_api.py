@@ -1,8 +1,9 @@
 from PythonAPI.aik import AIK
+import numpy as np
 
 
-dataset_dir = '/home/beatriz/Documentos/Work'   # For Bea
-# dataset_dir = '/home/almartmen/Github/aikapi'   # For Alberto
+# dataset_dir = '/home/beatriz/Documentos/Work'   # For Bea
+dataset_dir = '/home/almartmen/Github/aikapi'   # For Alberto
 dataset_name = '181129'
 
 aik = AIK(dataset_dir, dataset_name, image_format='png')
@@ -14,4 +15,9 @@ aik = AIK(dataset_dir, dataset_name, image_format='png')
 # print(aik.get_activities_for_person(2))
 
 # print(aik.get_images_in_frame(1))
-aik.unroll_videos(force=True, video=1)
+# aik.unroll_videos(force=True, video=1)
+camera = aik.get_camera(3,1)
+
+points3d = np.array([[0.498339264765202, 3.2171029078369897, 1.5828869056621102]])
+points2d = camera.projectPoints(points3d)
+print(points2d)

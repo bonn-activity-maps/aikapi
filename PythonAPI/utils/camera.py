@@ -4,100 +4,24 @@ import json
 from numba import vectorize, float32, float64, jit, boolean
 from math import sqrt
 
-class Camera:
-
-    def __init__(self, P, w, h, cid=-1):
-        self.P = P
-        self.w = w
-        self.h = h
-        self.cid = cid
-
-    def undistort(self, im):
-        """ undistorts the image
-        :param im: {h x w x c}
-        :return:
-        """
-        return im
-    
-    def undistort_points(self, points2d):
-        """
-        :param points2d: [ (x,y,w), ...]
-        :return:
-        """
-        return points2d
-    
-    def projectPoints_undist(self, points3d):
-        """
-            projects 3d points into 2d ones with
-            no distortion
-        :param points3d: {n x 3}
-        :return:
-        """
-        points2d = np.zeros((len(points3d), 2))
-        for i, (x,y,z) in enumerate(points3d):
-            p3d = np.array([x, y, z, 1])
-            a, b, c = self.P @ p3d
-            assert c != 0
-            points2d[i, 0] = a/c
-            points2d[i, 1] = b/c
-        return points2d
-
-    def projectPoints(self, points3d, withmask=False, binary_mask=True):
-        """
-            projects 3d points into 2d with
-            distortion being considered
-        :param points3d: {n x 3}
-        :param withmask: {boolean} if True return mask that tells if a point is in the view or not
-        :return:
-        """
-        pts2d = self.projectPoints_undist(points3d)
-        w = self.w
-        h = self.h
-        if withmask:
-            mask = []
-            for pt2d in pts2d:
-                x = pt2d[0]
-                y = pt2d[1]
-                if x < 0 or y < 0 or x > w or y > h:
-                    mask.append(0)
-                else:
-                    mask.append(1)
-
-            mask = np.array(mask)
-            if not binary_mask:
-                mask = mask.nonzero()
-
-            return pts2d, mask
-        else:
-            return pts2d
-
-
-class AffineCamera(Camera):
-    """
-        Affine camera
-    """
-
-    def __init__(self, P, w, h):
-        Camera.__init__(self, P, w, h)
-
-
-class ProjectiveCamera(Camera):
+class Camera():
     """
         Projective camera
     """
-
-    def __init__(self, K, rvec, tvec, distCoef, w, h):
-        K_new, roi = cv2.getOptimalNewCameraMatrix(K, distCoef, (w, h), 0)
-        mapx, mapy = cv2.initUndistortRectifyMap(K, distCoef, None, K_new, (w, h), 5)
-        self.K = K
+    def __init__(self, K, rvec, tvec, distCoef, w, h, cid=-1):
+        K_new, roi = cv2.getOptimalNewCameraMatrix(np.float32(K), np.float32(distCoef), (w, h), 0)
+        mapx, mapy = cv2.initUndistortRectifyMap(np.float32(K), np.float32(distCoef), None, K_new, (w, h), 5)
+        self.K = np.float32(K)
         self.mapx = mapx
         self.mapy = mapy
-        self.K_new = K_new
-        self.rvec = rvec
-        self.tvec = tvec
-        self.distCoef = distCoef
-        P = Geometry.get_projection_matrix(K_new, rvec, tvec)
-        Camera.__init__(self, P, w, h)
+        self.K_new = np.float32(K_new)
+        self.rvec = np.float32(rvec)
+        self.tvec = np.float32(tvec)
+        self.distCoef = np.float32(distCoef)
+        self.P = Geometry.get_projection_matrix(K_new, rvec, tvec)
+        self.w = w
+        self.h = h
+        self.cid = cid
     
     def get_C(self):
         """
@@ -176,6 +100,9 @@ class ProjectiveCamera(Camera):
             if len(pts2d.shape) == 1:
                 pts2d = np.expand_dims(pts2d, axis=0)
             return pts2d
+    
+    def to_json(self):
+        return json.dumps({'K': self.K.tolist(), 'P': self.P.tolist() ,'rvec': self.rvec.tolist(), 'tvec': self.tvec.tolist(), 'distCoef': self.distCoef.tolist(), 'w': self.w, 'h': self.h})
 
 
 class Geometry():
@@ -196,7 +123,7 @@ class Geometry():
         :param tvec: loc vector
         :return:
         """
-        R = cv2.Rodrigues(rvec)[0]
+        R = cv2.Rodrigues(np.float32(rvec))[0]
         Rt = np.zeros((3, 4))
         Rt[:, 0:3] = R
         Rt[:, 3] = tvec
