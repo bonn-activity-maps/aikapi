@@ -63,7 +63,7 @@ class Camera():
 
         return points2d_undist
 
-    def projectPoints_undist(self, points3d):
+    def project_points_undist(self, points3d):
         """
             projects 3d points into 2d ones with
             no distortion
@@ -79,7 +79,7 @@ class Camera():
             pts2d = np.expand_dims(pts2d, axis=0)
         return pts2d
 
-    def projectPoints(self, points3d, withmask=False, binary_mask=True):
+    def project_points(self, points3d, withmask=False, binary_mask=True):
         """
             projects 3d points into 2d with
             distortion being considered
@@ -92,6 +92,14 @@ class Camera():
                 points3d, self.rvec, self.tvec, self.K, self.w, self.h,
                 distCoef=self.distCoef, binary_mask=binary_mask)
         else:
+            # pts3d = []
+            # for p in points3d:
+            #     if p == []:
+            #         pts3d.append([None, None, None])
+            #     else:
+            #         pts3d.append(p)
+            # pts3d = np.array(pts3d, dtype='float32')
+
             pts2d, _ = cv2.projectPoints(points3d,
                                          self.rvec,
                                          self.tvec,
@@ -99,7 +107,16 @@ class Camera():
             pts2d = np.squeeze(pts2d)
             if len(pts2d.shape) == 1:
                 pts2d = np.expand_dims(pts2d, axis=0)
-            return pts2d
+
+            # points2d = []
+            # for p in pts2d:
+            #     if np.all((p == np.nan)):
+            #         points2d.append([])
+            #     else:
+            #         points2d.append(p.tolist())
+            # print(points2d)
+
+            return np.array(pts2d)
     
     def to_json(self):
         return json.dumps({'K': self.K.tolist(), 'P': self.P.tolist() ,'rvec': self.rvec.tolist(), 'tvec': self.tvec.tolist(), 'distCoef': self.distCoef.tolist(), 'w': self.w, 'h': self.h})
@@ -166,6 +183,7 @@ class Geometry():
         """
         if len(pts3d) == 0:
             return [], []
+
         Pts3d = pts3d.astype('float32')
         pts2d, _ = cv2.projectPoints(Pts3d, rvec, tvec, K, distCoef)
         pts2d = np.squeeze(pts2d)

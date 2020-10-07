@@ -152,7 +152,7 @@ class AIK:
             #     camera_params = np.append(camera_params, cam, axis=0)
             #
             cameras_data.append(data)
-        return np.array(cameras_data)
+        return np.array(cameras_data, dtype=object)
 
     def _read_annotations(self):
         '''
@@ -199,7 +199,7 @@ class AIK:
             persons_in_frame = d['persons']
             persons.append(persons_in_frame)
             last_frame = frame
-        return np.array(persons)
+        return np.array(persons, dtype=object)
 
     def _process_activities(self, activities_json):
         '''
@@ -214,7 +214,7 @@ class AIK:
             pid = d['pid']
             del d['pid']
             activities[pid].append(d)
-        return np.array(activities)
+        return np.array(activities, dtype=object)
 
     def _get_real_frame(self, frame):
         '''
@@ -283,8 +283,16 @@ class AIK:
                 interpolated_coords = np.linspace(np.array(kps1[i]), np.array(kps2[i]), num=3).tolist()
                 interpolated_kps.append(interpolated_coords[1])
             else:
-                interpolated_kps.append([])
-        return interpolated_kps
+                interpolated_kps.append([None, None, None])
+        return np.array(interpolated_kps)
+
+    def get_poses_in_frame(self, frame):
+        '''
+        Get all poses annotated in given frame. Interpolate keypoints if the frame is not annotated
+        :param frame (int): frame number
+        :return: Persons in json format
+        '''
+        return self._get_persons_or_poses_in_frame(frame, 'poseAIK')
 
     def get_persons_in_frame(self, frame):
         '''
@@ -292,57 +300,89 @@ class AIK:
         :param frame (int): frame number
         :return: Persons in json format
         '''
+        return self._get_persons_or_poses_in_frame(frame, 'personAIK')
+
+    def _get_persons_or_poses_in_frame(self, frame, obj_type):
+        '''
+        Get all persons or poses annotated in given frame. Interpolate keypoints if the frame is not annotated
+        :param frame (int): frame number
+        :param obj_type: poseAIK or personAIK
+        :return: Persons in json format
+        '''
         annotated, real_frame, next_frame = self._get_real_frame(frame)
         if annotated:
-            return np.array(self.persons[real_frame])
+            objects = []
+            for a in self.persons[real_frame]:
+                if a['type'] == obj_type:
+                    objects.append(a)
+            return np.array(objects)
         else:
             persons = []
             # Interpolate all persons
             for p1 in self.persons[real_frame]:
                 for p2 in self.persons[next_frame]:
-                    if p1['pid'] == p2['pid'] and len(p1['location']) == len(p2['location']):
+                    if p1['pid'] == p2['pid'] and len(p1['location']) == len(p2['location']) \
+                            and p1['type'] == obj_type and p2['type'] == obj_type:
                         interpolated_person = self._interpolate(p1['location'], p2['location'])
                         person_json = {
                             'pid': p1['pid'],
-                            'location': interpolated_person
+                            'location': interpolated_person,
+                            'type': p1['type']
                         }
                         persons.append(person_json)
                         break
             return np.array(persons)
 
-    # TODO: check types in export
-
     def get_person_in_frame(self, frame, person_id):
+        '''
+        Get person annotation for person_id in given frame.
+        :param frame (int): frame number
+        :param person_id (int): person identifier
+        :return: Person in json format if exists, info message otherwise
+        '''
+        return self._get_person_or_pose_in_frame(frame, person_id, 'personAIK')
+
+    def get_pose_in_frame(self, frame, person_id):
+        '''
+        Get pose annotation for person_id in given frame.
+        :param frame (int): frame number
+        :param person_id (int): person identifier
+        :return: Pose in json format if exists, info message otherwise
+        '''
+        return self._get_person_or_pose_in_frame(frame, person_id, 'poseAIK')
+
+    def _get_person_or_pose_in_frame(self, frame, person_id, obj_type):
         '''
         Get annotation for person_id in given frame.
         :param frame (int): frame number
         :param person_id (int): person identifier
-        :return: Person in json format if exists, info message otherwise
+        :param obj_type: poseAIK or personAIK
+        :return: Person/Pose in json format if exists, info message otherwise
         '''
         annotated, real_frame, next_frame = self._get_real_frame(frame)
         if annotated:
             frame_annotation = self.persons[real_frame]
             for a in frame_annotation:
-                if a['pid'] == person_id:
-                    return a['location']
+                if a['pid'] == person_id and a['type'] == obj_type:
+                    return np.array(a['location'])
         else:
             p1, p2 = [], []
             # Search keypoints in previous and next frame to interpolate
             frame_annotation = self.persons[real_frame]
             for a in frame_annotation:
-                if a['pid'] == person_id:
+                if a['pid'] == person_id and a['type'] == obj_type:
                     p1 = a['location']
                     break
             frame_annotation = self.persons[next_frame]
             for a in frame_annotation:
-                if a['pid'] == person_id:
+                if a['pid'] == person_id and a['type'] == obj_type:
                     p2 = a['location']
                     break
             # Interpolate only if the person exists in both frames
             if p1 and p2:
                 return self._interpolate(p1, p2)
 
-        return 'Person ' + str(person_id) + ' is not annotated in frame ' + str(frame)
+        return 'Object ' + str(person_id) + ' is not annotated in frame ' + str(frame)
 
     def get_activities_for_person(self, pid):
         '''
