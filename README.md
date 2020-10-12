@@ -61,7 +61,39 @@ ___
 - **Returns**:
   - (*numpy[JSON]*) numpy array with activities for the specified person in JSON format (for the structure of the JSON see section **JSON structures**)
 ## Camera class functions
-WIP
+#### get_C()
+- **Returns**:
+  - (*numpy*) (x,y,z) of the camera center in world coordinates.
+___
+#### undistort(image)
+Undistorts the given image.
+- **Parameters**:
+  - **image**: (*numpy*) image to be undistorted.
+- **Returns**:
+  - (*numpy*) the image undistorted.
+___
+#### undistort_points(points2d)
+Undistorts the given points.
+- **Parameters**:
+  - **point2d**: (*numpy*) points to be undistorted [(x,y,w), ...].
+- **Returns**:
+  - (*numpy*) the points undistorted.
+___
+#### projectPoints_undist(points3d)
+Projects 3D points into 2D with no distortion.
+- **Parameters**:
+  - **points3d**: (*numpy*) 3D points to be projected.
+- **Returns**:
+  - (*numpy*) the points in 2D undistorted.
+___
+#### projectPoints(points3d, withmask, binary_mask)
+Projects 3D points into 2D with distortion being considered.
+- **Parameters**:
+  - **points3d**: (*numpy*) 3D points to be projected.
+  - **withmask**: (*Bool*) if `True` returns mask that tell if a point is in the view or not.
+- **Returns**:
+  - (*numpy*) the projected points in 2D.
+  - (*numpy*) if **withmask** is `True` only. Array representing the mask.
 
 ## JSON structures
 WIP
