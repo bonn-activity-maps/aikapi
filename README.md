@@ -13,15 +13,15 @@ Constructor for the AIK class used to perform all actions over the dataset.
 - **Parameters**:
   - **datset_dir**: (*String*) path to the folder containing the datasets.
   - **dataset_name**: (*String*) name of the dataset folder.
-  - **image_format**: (*String, Optional*) format wanted for the image extraction. "png"/"jpeg". *default*="png"
+  - **image_format**: (*String, Optional*) format wanted for the image extraction. "png"/"jpeg". *default*=`"png"`
 - **Returns**:
   - (*AIK Object*) object to perform operations over the dataset
 ___
 #### unroll_videos(force, video)
 Unrolls (converts each frame to an individial image) all the videos from the dataset and stores them in the `videos` folder. This folder will be created if it not exists and will contain another 12 folders (cameraXX), each one containing the unrolled frames for the camera noted with XX.
 - **Parameters**:
-  - **force**: (*Bool, Optional*) if `True`, the already unrolled frames will be deleted (if they exist) and the unroll will be performed. *default*=False
-  - **video**: (*Integer, Optional*) if `None` all videos will be unrolled. If it has a value between 1 and 12, only that camera will be unrolled. *default*=None
+  - **force**: (*Bool, Optional*) if `True`, the already unrolled frames will be deleted (if they exist) and the unroll will be performed. *default*=`False`
+  - **video**: (*Integer, Optional*) if `None` all videos will be unrolled. If it has a value between 1 and 12, only that camera will be unrolled. *default*=`None`
 
 **Note**: if *video* is `None` and *force* is `True` all the already unrolled videos will be deleted and unrolled again.
 ___
@@ -31,6 +31,8 @@ Obtains the images for the specified frame in all the cameras.
   - **frame**: (*Integer*) frame number to get the images from.
 - **Returns**: 
   - (*numpy*) array with the 12 images for the specified frame.
+  
+**Note**: If the videos are not unrolled before getting the individual frames, then they will be automatically unrolled when you try to get the frames.
 ___
 #### get_camera(video, frame)
 Obtains the camera object for the specified video and frame.
@@ -49,6 +51,21 @@ Get all `persons` annotated in the given frame.
 ___
 #### get_person_in_frame(frame, person_id)
 Gets the annotation for the specified person in the specified frame
+- **Parameters**:
+  - **frame**: (*Integer*) frame number to get the person from.
+  - **person_id**: (*Integer*) person identifier.
+- **Returns**:
+  - (*JSON*) annotation for the specified person in the specified frame in JSON format (for the structure of the JSON see section **JSON structures**)
+___
+#### get_poses_in_frame(frame)
+Get all `poses` annotated in the given frame.
+- **Parameters**:
+  - **frame**: (*Integer*) frame number to get the poses from.
+ - **Returns**: 
+  - (*JSON*) poses annotated in the given frame in JSON format (for the structure of the JSON see section **JSON structures**)
+___
+#### get_pose_in_frame(frame, person_id)
+Gets the pose annotation for the specified person in the specified frame
 - **Parameters**:
   - **frame**: (*Integer*) frame number to get the person from.
   - **person_id**: (*Integer*) person identifier.
@@ -90,7 +107,7 @@ ___
 Projects 3D points into 2D with distortion being considered.
 - **Parameters**:
   - **points3d**: (*numpy*) 3D points to be projected.
-  - **withmask**: (*Bool, Optional*) if `True` returns mask that tell if a point is in the view or not. *default*=False
+  - **withmask**: (*Bool, Optional*) if `True` returns mask that tell if a point is in the view or not. *default*=`False`
 - **Returns**:
   - (*numpy*) the projected points in 2D.
   - (*numpy*) if **withmask** is `True` only. Array representing the mask.
