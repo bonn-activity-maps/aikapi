@@ -13,15 +13,15 @@ Constructor for the AIK class used to perform all actions over the dataset.
 - **Parameters**:
   - **datset_dir**: (*String*) path to the folder containing the datasets.
   - **dataset_name**: (*String*) name of the dataset folder.
-  - **image_format**: (*String*) format wanted for the image extraction. "png" (default)/"jpeg".
+  - **image_format**: (*String, Optional*) format wanted for the image extraction. "png"/"jpeg". *default*="png"
 - **Returns**:
   - (*AIK Object*) object to perform operations over the dataset
 ___
 #### unroll_videos(force, video)
 Unrolls (converts each frame to an individial image) all the videos from the dataset and stores them in the `videos` folder. This folder will be created if it not exists and will contain another 12 folders (cameraXX), each one containing the unrolled frames for the camera noted with XX.
 - **Parameters**:
-  - **force**: (*Bool*) if `True`, the already unrolled frames will be deleted (if the exist) and the unroll will be performed.
-  - **video**: (*Integer*) if `None` all videos will be unrolled. If it has a value between 1 and 12, only that camera will be unrolled.
+  - **force**: (*Bool, Optional*) if `True`, the already unrolled frames will be deleted (if they exist) and the unroll will be performed. *default*=False
+  - **video**: (*Integer, Optional*) if `None` all videos will be unrolled. If it has a value between 1 and 12, only that camera will be unrolled. *default*=None
 
 **Note**: if *video* is `None` and *force* is `True` all the already unrolled videos will be deleted and unrolled again.
 ___
@@ -86,11 +86,11 @@ Projects 3D points into 2D with no distortion.
 - **Returns**:
   - (*numpy*) the points in 2D undistorted.
 ___
-#### projectPoints(points3d, withmask, binary_mask)
+#### project_points(points3d, withmask, binary_mask)
 Projects 3D points into 2D with distortion being considered.
 - **Parameters**:
   - **points3d**: (*numpy*) 3D points to be projected.
-  - **withmask**: (*Bool*) if `True` returns mask that tell if a point is in the view or not.
+  - **withmask**: (*Bool, Optional*) if `True` returns mask that tell if a point is in the view or not. *default*=False
 - **Returns**:
   - (*numpy*) the projected points in 2D.
   - (*numpy*) if **withmask** is `True` only. Array representing the mask.
