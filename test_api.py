@@ -9,11 +9,13 @@ dataset_name = '181129'
 aik = AIK(dataset_dir, dataset_name, image_format='png')
 
 # print(aik.get_calibration_params(3, 1))
-# print(aik.get_persons_in_frame(801))
+print(aik.get_persons_in_frame(800))
+exit()
 print(aik.get_poses_in_frame(801))
-# print(aik.get_person_in_frame(800, 1))
+person3d = aik.get_person_in_frame(800, 1)
+print(person3d)
 pose3d = aik.get_pose_in_frame(799, 1)
-# print(pose3d)
+print(pose3d)
 
 # print(aik.get_activities_for_person(2))
 
@@ -25,9 +27,5 @@ camera = aik.get_camera(3,1)
 # points2d = camera.project_points(points3d)
 # print(points2d)
 
-# mask = [True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, False, False, False, False, False, False]
-# points2d_pose = camera.project_points(pose3d, True, mask)
-
 points2d_pose = camera.project_points(pose3d)
-
 print(points2d_pose)

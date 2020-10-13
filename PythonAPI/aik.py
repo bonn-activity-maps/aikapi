@@ -326,7 +326,7 @@ class AIK:
                         interpolated_person = self._interpolate(p1['location'], p2['location'])
                         person_json = {
                             'pid': p1['pid'],
-                            'location': interpolated_person,
+                            'location': interpolated_person.tolist(),
                             'type': p1['type']
                         }
                         persons.append(person_json)
@@ -364,7 +364,9 @@ class AIK:
             frame_annotation = self.persons[real_frame]
             for a in frame_annotation:
                 if a['pid'] == person_id and a['type'] == obj_type:
-                    return np.array(a['location'])
+                    # Substitute empty lists with None
+                    pts3d = [x if x else [None, None, None] for x in a['location']]
+                    return np.array(pts3d)
         else:
             p1, p2 = [], []
             # Search keypoints in previous and next frame to interpolate

@@ -92,30 +92,31 @@ class Camera():
                 points3d, self.rvec, self.tvec, self.K, self.w, self.h,
                 distCoef=self.distCoef, binary_mask=binary_mask)
         else:
-            # pts3d = []
-            # for p in points3d:
-            #     if p == []:
-            #         pts3d.append([None, None, None])
-            #     else:
-            #         pts3d.append(p)
-            # pts3d = np.array(pts3d, dtype='float32')
+            assert type(points3d) == np.ndarray, "Points3d has to be a numpy array"
 
-            pts2d, _ = cv2.projectPoints(points3d,
-                                         self.rvec,
-                                         self.tvec,
-                                         self.K, self.distCoef)
+            # Treatment for empty points
+            # Add row index of None points to new list and remove the empty elements
+            indexes_of_empty_points = np.unique(np.where(points3d == None)[0])
+            points_to_interpolate = np.float32(points3d.copy())
+            points_to_interpolate = np.delete(points_to_interpolate, indexes_of_empty_points, axis=0)
+
+            # Project all the points in the camera if points_to_interpolate is not empty
+            if points_to_interpolate.size != 0:
+                pts2d, _ = cv2.projectPoints(points_to_interpolate,
+                                             self.rvec,
+                                             self.tvec,
+                                             self.K, self.distCoef)
+            else:
+                pts2d = np.array([])
+
             pts2d = np.squeeze(pts2d)
             if len(pts2d.shape) == 1:
                 pts2d = np.expand_dims(pts2d, axis=0)
 
-            # points2d = []
-            # for p in pts2d:
-            #     if np.all((p == np.nan)):
-            #         points2d.append([])
-            #     else:
-            #         points2d.append(p.tolist())
-            # print(points2d)
-
+            # Add empty(None) points again
+            pts2d = pts2d.tolist()
+            for index in indexes_of_empty_points:
+                pts2d.insert(index, [None, None])
             return np.array(pts2d)
     
     def to_json(self):
