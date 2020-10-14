@@ -6,17 +6,22 @@ import json
 import numpy as np
 import cv2
 import shutil
+from typing import Optional, Tuple, Union, List, TypeVar
 from PythonAPI.utils.camera import Camera
+
+kp = TypeVar('kp', float, float, float)
+
 
 class AIK:
 
-    def __init__(self, dataset_dir, dataset_name, image_format='png'):
-        '''
-        Constructor AIK class for reading and visualizing annotations.
-        :param dataset_dir (str): location of the dataset
-        :param dataset_name (str): name of the dataset
-        :param image_format (str): format of images to extract video frames, png or jpeg (png by default)
-        '''
+    def __init__(self, dataset_dir: str, dataset_name: str, image_format: str = 'png') -> None:
+        """
+            Constructor for AIK class for reading and visualizing annotations.
+
+        :param dataset_dir: absolute path to the folder containing the datasets
+        :param dataset_name: name of the dataset folder
+        :param image_format: format of images to extract video frames, png or jpeg (png by default)
+        """
         self.dataset_name = dataset_name
         self.dataset_dir = os.path.join(dataset_dir, self.dataset_name)
         self.cameras_dir = os.path.join(self.dataset_dir, 'cameras')
@@ -38,11 +43,12 @@ class AIK:
         self.persons, self.objects, self.activities = self._read_annotations()
         print('Finish loading dataset')
 
-    def _unroll_video(self, video):
-        '''
-        Unroll video in its corresponding folder. Create cameraXX folder
+    def _unroll_video(self, video: int) -> None:
+        """
+            Unrolls video in its corresponding folder. Creates cameraXX folder
+
         :param video: number of video
-        '''
+        """
         video_file = self.dataset_name + '_' + str(video).zfill(2) + '.mp4'
 
         # Create camera directory to store all frames
@@ -58,17 +64,16 @@ class AIK:
                                      os.path.join(camera_dir, self.frame_format + "." + self.image_format)])
         # print("The exit code was: %d" % unroll.returncode)
 
-    def unroll_videos(self, force=False, video=None):
-        '''
-        Unroll all the videos and store them in the videos folder. This folder contains 12 folders (cameraXX) with
+    def unroll_videos(self, force: bool = False, video: Optional[int] = None) -> None:
+        """
+            Unrolls all the videos and stores them in the videos folder. This folder contains 12 folders (cameraXX) with
         the unrolled frames from each camera.
         Create videos folder if it doesn't exist.
+
         :param force: if True, the unrolled frames are deleted and the videos are unrolled again
         :param video: if None all videos are unrolled.
                       If it has a concrete value, only that video is unrolled
-        :return:
-        '''
-
+        """
         # Remove folders
         if force:
             if video is None:   # remove videos folder
@@ -115,11 +120,12 @@ class AIK:
             print('Unrolling video', video, '. This may take a while...')
             self._unroll_video(int(video))
 
-    def _read_dataset_info(self):
-        '''
-        Read general dataset information.
-        :return: Number of cameras
-        '''
+    def _read_dataset_info(self) -> int:
+        """
+            Reads general dataset information.
+        
+        :returns: Number of cameras
+        """
         print('Reading dataset information...')
         dataset_file = os.path.join(self.dataset_dir, 'dataset.json')
         assert os.path.isfile(dataset_file), "The dataset is not complete, the dataset.json file is missing"
@@ -128,11 +134,12 @@ class AIK:
             data = json.load(f)
         return data['n_cameras']
 
-    def _read_calibration_params(self):
-        '''
-        Read camera calibration parameters for each camera.
-        :return: Numpy array with calibration parameters
-        '''
+    def _read_calibration_params(self) -> np.ndarray:
+        """
+            Reads camera calibration parameters for each camera.
+
+        :returns: Numpy array with calibration parameters
+        """
         print('Loading calibration parameters...')
         cameras_data = []
 
@@ -154,11 +161,12 @@ class AIK:
             cameras_data.append(data)
         return np.array(cameras_data, dtype=object)
 
-    def _read_annotations(self):
-        '''
-        Read persons, objects and actions information from file.
-        :return: Persons, objects and activities numpy arrays with information in json format
-        '''
+    def _read_annotations(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+            Reads persons, objects and actions information from file.
+
+        :returns: Persons, objects and activities numpy arrays with information in json format
+        """
         print('Loading annotations...')
         with open(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json')) as f:
             json_data = json.load(f)
@@ -168,7 +176,7 @@ class AIK:
         del json_data['persons']
 
         # print('Processing objects...')
-        objects = []
+        objects = np.array([])
         # for d in json_data['objects']:
         #     objects.append(d)
         del json_data['objects']
@@ -178,12 +186,13 @@ class AIK:
 
         return persons, objects, activities
 
-    def _process_persons(self, persons_json):
-        '''
-        Process persons json and order by frame.
-        :param persons_json : json with persons information
-        :return: numpy array with person info in json format for each frame
-        '''
+    def _process_persons(self, persons_json: np.ndarray) -> np.ndarray:
+        """
+            Process persons json and order by frame.
+
+        :param persons_json: numpy array with jsons that contain persons information
+        :returns: numpy array with person info in json format for each frame
+        """
         print('Processing persons...')
         persons = []
         last_frame = -1
@@ -201,12 +210,13 @@ class AIK:
             last_frame = frame
         return np.array(persons, dtype=object)
 
-    def _process_activities(self, activities_json):
-        '''
-        Process activities json and order by person id.
-        :param activities_json : json with activities information
-        :return: array with activities info ordered by person id
-        '''
+    def _process_activities(self, activities_json: np.ndarray) -> np.ndarray:
+        """
+            Process activities json and order by person id.
+
+        :param activities_json: numpy array with jsons that contain activities information
+        :returns: numpy array with activities info ordered by person id
+        """
         print('Processing actions...')
         activities = [[] for i in range(self.max_persons)]  # Initialize with empty activities
 
@@ -216,14 +226,15 @@ class AIK:
             activities[pid].append(d)
         return np.array(activities, dtype=object)
 
-    def _get_real_frame(self, frame):
-        '''
-        Get the real frames or frames that need to be interpolated
+    def _get_real_frame(self, frame: int) -> Tuple[bool, int, int]:
+        """
+            Gets the real frames or frames that need to be interpolated
+
         :param frame: number of frame
-        :return: True if the dataset contains the info about the frame, False if we have to interpolate.
+        :returns: True if the dataset contains the info about the frame, False if we have to interpolate.
                 The real frame if it is stored in the dataset
                 The previous and posterior frames if the information about that frame is not stored
-        '''
+        """
         # Even -> the frame info is not contained in the dataset
         if (frame % 2) == 0:
             real_frame = frame//2
@@ -231,13 +242,14 @@ class AIK:
         else:     # Odd -> return real frame
             return True, frame//2 + 1, -1
 
-    def _get_calibration_params(self, video, frame):
-        '''
-        Get calibration parameters that satisfy given filter conditions. Multiply x2-1 in order to get upsampled frames in range
-        :param video (int): video number
-        :param frame (int): frame number
-        :return: calibration parameters in json format with K, rvec, tvec, distCoef, w and h
-        '''
+    def _get_calibration_params(self, video: int, frame: int) -> Tuple[bool, Union[dict, str]]:
+        """
+            Gets calibration parameters that satisfy given filter conditions. Multiply x2-1 in order to get upsampled frames in range
+
+        :param video: video number
+        :param frame: frame number
+        :returns: calibration parameters in json format with K, rvec, tvec, distCoef, w and h
+        """
         for p in self.calibration_params[video]:
             start_frame = p['start_frame'] * 2 - 1
             end_frame = p['end_frame'] * 2 - 1
@@ -245,16 +257,17 @@ class AIK:
                 new_params = p.copy()
                 new_params['start_frame'] = start_frame
                 new_params['end_frame'] = end_frame
-                return (True,new_params)
-        return (False,'Frame ' + str(frame) + ' does not exist in dataset ' + self.dataset_name)
+                return True, new_params
+        return False, 'Frame ' + str(frame) + ' does not exist in dataset ' + self.dataset_name
     
-    def get_camera(self, video, frame):
-        '''
-        Get Camera for specified video and frame. Multiply x2-1 in order to get upsampled frames in range
-        :param video (int): video number
-        :param frame (int): frame number
-        :return: Camera object
-        '''
+    def get_camera(self, video: int, frame: int) -> Union[Camera, None]:
+        """
+            Gets Camera for specified video and frame. Multiply x2-1 in order to get upsampled frames in range
+
+        :param video: video number
+        :param frame: frame number
+        :returns: Camera object
+        """
         params = self._get_calibration_params(video, frame)
         # Check if we found the camera parameters
         if not (params[0]):
@@ -269,13 +282,14 @@ class AIK:
         # Return the camera
         return camera
 
-    def _interpolate(self, kps1, kps2):
-        '''
-            Interpolate all keypoints the frame in between kps1 and kps2
+    def _interpolate(self, kps1: List[List[kp]], kps2: List[List[kp]]) -> np.ndarray:
+        """
+            Interpolates all keypoints the frame in between kps1 and kps2
+
         :param kps1: keypoints from first frame
         :param kps2: keypoints from second frame
-        :return: list with interpolated keypoints
-        '''
+        :returns: numpy array with interpolated keypoints
+        """
         interpolated_kps = []
         for i in range(len(kps1)):
             # If one of the two points is empty -> Not interpolate
@@ -286,29 +300,32 @@ class AIK:
                 interpolated_kps.append([None, None, None])
         return np.array(interpolated_kps)
 
-    def get_poses_in_frame(self, frame):
-        '''
-        Get all poses annotated in given frame. Interpolate keypoints if the frame is not annotated
-        :param frame (int): frame number
-        :return: Persons in json format
-        '''
+    def get_poses_in_frame(self, frame: int) -> np.ndarray:
+        """
+            Gets all poses annotated in the given frame. Interpolates keypoints if the frame is not annotated
+
+        :param frame: frame number
+        :returns: Poses annotated in the given frame in json format
+        """
         return self._get_persons_or_poses_in_frame(frame, 'poseAIK')
 
-    def get_persons_in_frame(self, frame):
-        '''
-        Get all persons annotated in given frame. Interpolate keypoints if the frame is not annotated
-        :param frame (int): frame number
-        :return: Persons in json format
-        '''
+    def get_persons_in_frame(self, frame: int) -> np.ndarray:
+        """
+            Gets all persons annotated in the given frame. Interpolates keypoints if the frame is not annotated
+
+        :param frame: frame number
+        :returns: Persons annotated in the given frame in json format
+        """
         return self._get_persons_or_poses_in_frame(frame, 'personAIK')
 
-    def _get_persons_or_poses_in_frame(self, frame, obj_type):
-        '''
-        Get all persons or poses annotated in given frame. Interpolate keypoints if the frame is not annotated
-        :param frame (int): frame number
+    def _get_persons_or_poses_in_frame(self, frame: int, obj_type: str) -> np.ndarray:
+        """
+            Gets all persons or poses annotated in the given frame. Interpolates keypoints if the frame is not annotated
+
+        :param frame: frame number
         :param obj_type: poseAIK or personAIK
-        :return: Persons in json format
-        '''
+        :returns: Persons or poses annotated in the given frame in json format
+        """
         annotated, real_frame, next_frame = self._get_real_frame(frame)
         if annotated:
             objects = []
@@ -333,32 +350,35 @@ class AIK:
                         break
             return np.array(persons)
 
-    def get_person_in_frame(self, frame, person_id):
-        '''
-        Get person annotation for person_id in given frame.
-        :param frame (int): frame number
-        :param person_id (int): person identifier
-        :return: Person in json format if exists, info message otherwise
-        '''
+    def get_person_in_frame(self, frame: int, person_id: int) -> np.ndarray:
+        """
+            Gets person annotation for person_id in the given frame.
+
+        :param frame: frame number
+        :param person_id: person identifier
+        :returns: Person annotated in the given frame in json format if exists, empty array otherwise
+        """
         return self._get_person_or_pose_in_frame(frame, person_id, 'personAIK')
 
-    def get_pose_in_frame(self, frame, person_id):
-        '''
-        Get pose annotation for person_id in given frame.
-        :param frame (int): frame number
-        :param person_id (int): person identifier
-        :return: Pose in json format if exists, info message otherwise
-        '''
+    def get_pose_in_frame(self, frame: int, person_id: int) -> np.ndarray:
+        """
+            Gets pose annotation for person_id in the given frame.
+
+        :param frame: frame number
+        :param person_id: person identifier
+        :returns: Pose in json format if exists, empty array otherwise
+        """
         return self._get_person_or_pose_in_frame(frame, person_id, 'poseAIK')
 
-    def _get_person_or_pose_in_frame(self, frame, person_id, obj_type):
-        '''
-        Get annotation for person_id in given frame.
-        :param frame (int): frame number
-        :param person_id (int): person identifier
+    def _get_person_or_pose_in_frame(self, frame: int, person_id: int, obj_type: str) -> np.ndarray:
+        """
+            Gets annotation for person_id in the given frame.
+
+        :param frame: frame number
+        :param person_id: person identifier
         :param obj_type: poseAIK or personAIK
-        :return: Person/Pose in json format if exists, info message otherwise
-        '''
+        :returns: Person/Pose annotated in the given frame in json format if exists, empty array otherwise
+        """
         annotated, real_frame, next_frame = self._get_real_frame(frame)
         if annotated:
             frame_annotation = self.persons[real_frame]
@@ -384,14 +404,15 @@ class AIK:
             if p1 and p2:
                 return self._interpolate(p1, p2)
 
-        return 'Object ' + str(person_id) + ' is not annotated in frame ' + str(frame)
+        return np.array([])
 
-    def get_activities_for_person(self, pid):
-        '''
-        Get all activities annotated for person with pid. Multiply ranges x2-1 in order to get correct ranges
-        :param pid (int): person identifier
-        :return: Numpy array with activities in json format
-        '''
+    def get_activities_for_person(self, pid: int) -> np.ndarray:
+        """
+            Gets all activities annotated for the person with pid. Multiply ranges x2-1 in order to get correct ranges
+
+        :param pid: person identifier
+        :returns: Numpy array with activities for the specified person in json format
+        """
         activities = []
         for a in self.activities[pid]:
             new_activity = a.copy()
@@ -400,12 +421,13 @@ class AIK:
             activities.append(new_activity)
         return np.array(activities)
 
-    def get_images_in_frame(self, frame):
-        '''
-        Get camera images corresponding to the frame.
-        :param frame (int): frame number
-        :return: Array with images in numpy_array format if the frame exists, info message otherwise
-        '''
+    def get_images_in_frame(self, frame: int) -> np.ndarray:
+        """
+            Gets camera images for the specified frame in all the cameras
+
+        :param frame: frame number
+        :returns: Numpy array with images in numpy array format if the frame exists, empty array otherwise
+        """
 
         # Check if it's the first time the frames are requested and the videos are not unrolled
         if not os.path.exists(self.videos_dir):
@@ -432,7 +454,7 @@ class AIK:
             images.append(image)
 
         print("Images of frame ", frame, " retrieved.")
-        return images
+        return np.array(images)
 
 
 
