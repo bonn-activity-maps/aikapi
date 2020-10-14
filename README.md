@@ -8,7 +8,7 @@ This project contains the API to load and interact with **Action In Kitchen** da
 3. Place the AIK dataset folders at the same level as **PythonAPI** folder.
 
 ## AIK class functions
-#### AIK(dataset_dir, ataset_name, image_format)
+#### AIK(dataset_dir, dataset_name, image_format)
 Constructor for the AIK class used to perform all actions over the dataset.
 - **Parameters**:
   - **datset_dir**: (*String*) path to the folder containing the datasets.
