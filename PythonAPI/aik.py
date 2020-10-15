@@ -162,7 +162,7 @@ class AIK:
             cameras_data.append(data)
         return np.array(cameras_data, dtype=object)
 
-    def _read_annotations(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _read_annotations(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
             Reads persons, objects, actions and ids information from file.
 
@@ -471,7 +471,7 @@ class AIK:
         """
             Returns the existing person ids in the dataset
 
-        :returns: Numpy array with the existint IDs of the persons in the dataset
+        :returns: Numpy array with the existing IDs of the persons in the dataset
         """
         return self.ids
 
