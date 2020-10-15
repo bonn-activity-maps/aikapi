@@ -40,7 +40,8 @@ class AIK:
 
         # Load info to memory
         self.calibration_params = self._read_calibration_params()
-        self.persons, self.objects, self.activities = self._read_annotations()
+        self.persons, self.objects, self.activities, self.ids = self._read_annotations()
+
         print('Finish loading dataset')
 
     def _unroll_video(self, video: int) -> None:
@@ -163,16 +164,16 @@ class AIK:
 
     def _read_annotations(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
-            Reads persons, objects and actions information from file.
+            Reads persons, objects, actions and ids information from file.
 
-        :returns: Persons, objects and activities numpy arrays with information in json format
+        :returns: Persons, objects, activities and ids numpy arrays with information in json format
         """
         print('Loading annotations...')
         with open(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json')) as f:
             json_data = json.load(f)
 
         # Process and separate data into persons, objects and activities
-        persons = self._process_persons(json_data['persons'])
+        persons, ids = self._process_persons(json_data['persons'])
         del json_data['persons']
 
         # print('Processing objects...')
@@ -184,17 +185,18 @@ class AIK:
         activities = self._process_activities(json_data['actions'])
         del json_data['actions']
 
-        return persons, objects, activities
+        return persons, objects, activities, ids
 
-    def _process_persons(self, persons_json: np.ndarray) -> np.ndarray:
+    def _process_persons(self, persons_json: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
-            Process persons json and order by frame.
+            Process persons and ids jsons ordered by frame.
 
         :param persons_json: numpy array with jsons that contain persons information
-        :returns: numpy array with person info in json format for each frame
+        :returns: tuple with numpy arrays with person info and ids in json format for each frame
         """
         print('Processing persons...')
         persons = []
+        ids = []
         last_frame = -1
         for d in persons_json:
             frame = d['frame']
@@ -206,9 +208,18 @@ class AIK:
 
             # Add persons in current frame
             persons_in_frame = d['persons']
+            
+            # Get the ids of the annotated persons
+            for person in persons_in_frame:
+                ids.append(person['pid']) 
+            
             persons.append(persons_in_frame)
             last_frame = frame
-        return np.array(persons, dtype=object)
+        
+        # Make sure that there are no repeated IDs
+        ids = np.unique(ids)
+
+        return np.array(persons, dtype=object), ids
 
     def _process_activities(self, activities_json: np.ndarray) -> np.ndarray:
         """
@@ -455,6 +466,14 @@ class AIK:
 
         print("Images of frame ", frame, " retrieved.")
         return np.array(images)
+    
+    def get_person_ids(self) -> np.ndarray:
+        """
+            Returns the existing person ids in the dataset
+
+        :returns: Numpy array with the existint IDs of the persons in the dataset
+        """
+        return self.ids
 
 
 
