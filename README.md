@@ -1,9 +1,12 @@
 # AIKAPI
 This project contains the API to load and interact with **Action In Kitchen** datasets. (WIP)
 
+## General information about the datasets
+- The framerate of the videos is 25 Hz.
+
 ## Installation
 
-1. Clone or download the repository
+1. Clone or download the repository.
 2. Install the required Python3 packages with: `pip3 install -r requirements.txt`
 3. Place the AIK dataset folders at the same level as **PythonAPI** folder.
 
@@ -52,7 +55,7 @@ Get all `persons` annotated in the given frame.
 - **Parameters**:
   - **frame**: (*Integer*) frame number to get the persons from.
  - **Returns**: 
-    - (*JSON*) persons annotated in the given frame in JSON format (for the structure of the JSON see section **JSON structures**)
+    - (*numpy[personJSON]*) persons annotated in the given frame in JSON format (for the structure of the JSON see section **JSON structures**)
 ___
 #### get_person_in_frame(frame, person_id)
 Gets the annotation for the specified person in the specified frame
@@ -60,14 +63,14 @@ Gets the annotation for the specified person in the specified frame
   - **frame**: (*Integer*) frame number to get the person from.
   - **person_id**: (*Integer*) person identifier.
 - **Returns**:
-  - (*JSON*) annotation for the specified person in the specified frame in JSON format (for the structure of the JSON see section **JSON structures**)
+  - (*numpy*) numpy array with the 3d coordinates for the specified person
 ___
 #### get_poses_in_frame(frame)
 Get all `poses` annotated in the given frame.
 - **Parameters**:
   - **frame**: (*Integer*) frame number to get the poses from.
 - **Returns**: 
-  - (*JSON*) poses annotated in the given frame in JSON format (for the structure of the JSON see section **JSON structures**)
+  - (*numpy[poseJSON]*) poses annotated in the given frame in JSON format (for the structure of the JSON see section **JSON structures**)
 ___
 #### get_pose_in_frame(frame, person_id)
 Gets the pose annotation for the specified person in the specified frame
@@ -75,13 +78,13 @@ Gets the pose annotation for the specified person in the specified frame
   - **frame**: (*Integer*) frame number to get the person from.
   - **person_id**: (*Integer*) person identifier.
 - **Returns**:
-  - (*JSON*) annotation for the specified person in the specified frame in JSON format (for the structure of the JSON see section **JSON structures**)
+  - (*numpy*) numpy array with the 3D coordinates for the specified person
 ___
 #### get_activities_for_person(person_id)
 - **Parameters**:
   - **person_id**: (*Integer*) person identifier.
 - **Returns**:
-  - (*numpy[JSON]*) numpy array with activities for the specified person in JSON format (for the structure of the JSON see section **JSON structures**)
+  - (*numpy[activityJSON]*) numpy array with activities for the specified person in JSON format (for the structure of the JSON see section **JSON structures**)
 ## Camera class functions
 #### get_C()
 - **Returns**:
@@ -118,7 +121,50 @@ Projects 3D points into 2D with distortion being considered.
   - (*numpy*) if **withmask** is `True` only. Array representing the mask.
 
 ## JSON structures
-WIP
+
+#### Person json
+Contains:
+- person identifier
+- array with 3D coordinates corresponding to the nose of the person
+- object type, always *personAIK* for persons
+```
+{
+    'pid': {int}, 
+    'location': [
+                  [x, y, z]
+                ],
+    'type': 'personAIK'
+}
+```
+
+#### Pose json
+Contains:
+- person identifier
+- array with 3D coordinates corresponding to the 24 joints of the person
+- object type, always *poseAIK* for poses
+```
+{
+    'pid': {int}, 
+    'location': [
+                  [x, y, z],
+                  [x, y, z],
+                   ...
+                ],
+    'type': 'poseAIK'
+}
+```
+#### Activity json
+Contains:
+- activity name
+- frame where the activity begins 
+- frame where the activity ends
+```
+{
+    'label': {string},
+    'start_frame': {int},
+    'end_frame': {int}
+}
+```
 
 ## Examples
 For examples of how to use the API you can check the Jupyter Notebook [`test_api.ipynb`](https://github.com/bonn-activity-maps/aikapi/blob/master/test_api.ipynb) provided inside the repository.
