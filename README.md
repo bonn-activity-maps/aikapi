@@ -33,6 +33,16 @@ Returns the existing person ids in the dataset
 - **Returns**:
   - (*numpy*) numpy array with the existing IDs of the persons in the dataset
 ___
+#### get_total_frames()
+Returns the total number of frames in the dataset
+- **Returns**:
+  - (*int*) total number of frames in the dataset
+___
+#### get_total_cameras()
+Returns the total number of cameras in the dataset
+- **Returns**:
+  - (*int*) total number of cameras in the dataset
+___
 #### get_images_in_frame(frame)
 Obtains the images for the specified frame in all the cameras.
 - **Parameters**:
