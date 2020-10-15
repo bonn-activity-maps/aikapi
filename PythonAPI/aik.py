@@ -34,7 +34,7 @@ class AIK:
         assert image_format in ['png', 'jpeg'], "The image format should be png or jpeg"
         self.image_format = image_format
 
-        self.num_cameras = self._read_dataset_info()
+        self.num_cameras, self.num_frames = self._read_dataset_info()
         self.frame_format = "frame%09d"
         self.max_persons = 50
 
@@ -121,11 +121,11 @@ class AIK:
             print('Unrolling video', video, '. This may take a while...')
             self._unroll_video(int(video))
 
-    def _read_dataset_info(self) -> int:
+    def _read_dataset_info(self) -> Tuple[int, int]:
         """
             Reads general dataset information.
         
-        :returns: Number of cameras
+        :returns: Number of cameras and number of frames
         """
         print('Reading dataset information...')
         dataset_file = os.path.join(self.dataset_dir, 'dataset.json')
@@ -133,7 +133,9 @@ class AIK:
 
         with open(dataset_file) as f:
             data = json.load(f)
-        return data['n_cameras']
+
+        num_frames = data['valid_frames'][-1]
+        return data['n_cameras'], num_frames
 
     def _read_calibration_params(self) -> np.ndarray:
         """
@@ -474,6 +476,22 @@ class AIK:
         :returns: Numpy array with the existing IDs of the persons in the dataset
         """
         return self.ids
+
+    def get_total_frames(self) -> int:
+        """
+            Returns the total number of frames in the dataset
+
+        :returns: Total number of frames in the dataset
+        """
+        return self.num_frames
+
+    def get_total_cameras(self) -> int:
+        """
+            Returns the total number of cameras in the dataset
+
+        :returns: Total number of cameras in the dataset
+        """
+        return self.num_cameras
 
 
 

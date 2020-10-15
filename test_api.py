@@ -2,13 +2,13 @@ from PythonAPI.aik import AIK
 import numpy as np
 
 
-# dataset_dir = '/home/beatriz/Documentos/Work'   # For Bea
-dataset_dir = '/home/almartmen/Github/aikapi'   # For Alberto
+dataset_dir = '/home/beatriz/Documentos/Work'   # For Bea
+# dataset_dir = '/home/almartmen/Github/aikapi'   # For Alberto
 dataset_name = '181129'
 
 aik = AIK(dataset_dir, dataset_name, image_format='png')
 
-print(aik.get_persons_in_frame(800))
+# print(aik.get_persons_in_frame(800))
 # print(aik.get_poses_in_frame(801))
 # person3d = aik.get_person_in_frame(800, 1)
 # print(person3d)
@@ -29,3 +29,5 @@ print(aik.get_persons_in_frame(800))
 # print(points2d_pose)
 
 # aik.unroll_videos()
+print(aik.get_total_cameras())
+print(aik.get_total_frames())
