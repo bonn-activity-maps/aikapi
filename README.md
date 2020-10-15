@@ -25,6 +25,11 @@ Unrolls (converts each frame to an individial image) all the videos from the dat
 
 **Note**: if *video* is `None` and *force* is `True` all the already unrolled videos will be deleted and unrolled again.
 ___
+#### get_person_ids()
+Returns the existing person ids in the dataset
+- **Returns**:
+  - (*numpy*) numpy array with the existing IDs of the persons in the dataset
+___
 #### get_images_in_frame(frame)
 Obtains the images for the specified frame in all the cameras.
 - **Parameters**:
@@ -47,7 +52,7 @@ Get all `persons` annotated in the given frame.
 - **Parameters**:
   - **frame**: (*Integer*) frame number to get the persons from.
  - **Returns**: 
-  - (*JSON*) persons annotated in the given frame in JSON format (for the structure of the JSON see section **JSON structures**)
+    - (*JSON*) persons annotated in the given frame in JSON format (for the structure of the JSON see section **JSON structures**)
 ___
 #### get_person_in_frame(frame, person_id)
 Gets the annotation for the specified person in the specified frame
@@ -61,7 +66,7 @@ ___
 Get all `poses` annotated in the given frame.
 - **Parameters**:
   - **frame**: (*Integer*) frame number to get the poses from.
- - **Returns**: 
+- **Returns**: 
   - (*JSON*) poses annotated in the given frame in JSON format (for the structure of the JSON see section **JSON structures**)
 ___
 #### get_pose_in_frame(frame, person_id)
