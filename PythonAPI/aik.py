@@ -134,7 +134,8 @@ class AIK:
         with open(dataset_file) as f:
             data = json.load(f)
 
-        num_frames = data['valid_frames'][-1]
+        # Get total number of frames and upsample
+        num_frames = data['valid_frames'][-1] * 2
         return data['n_cameras'], num_frames
 
     def _read_calibration_params(self) -> np.ndarray:
