@@ -135,8 +135,16 @@ class AIK:
             data = json.load(f)
 
         # Get total number of frames and upsample
-        num_frames = data['valid_frames'][-1] * 2
-        return data['n_cameras'], num_frames
+        # num_frames = data['valid_frames'][-1] * 2
+
+        # Total frames, for now.. --> Horrible hardcoding but necessary, please change it in the future!
+        total_frames = {
+            '181129': 64862 * 2 - 1,
+            '190502': 89585 * 2,
+            '190719': 87778 * 2,
+            '190726': 88819 * 2,
+        }
+        return data['n_cameras'], total_frames[self.dataset_name]
 
     def _read_calibration_params(self) -> np.ndarray:
         """
@@ -218,7 +226,12 @@ class AIK:
             
             persons.append(persons_in_frame)
             last_frame = frame
-        
+
+        # Add empty frames at the end if the dataset has unnanotated frames to avoid errors
+        if len(persons) <= self.num_frames//2:
+            for i in range(len(persons), self.num_frames//2+1):
+                persons.append([])
+
         # Make sure that there are no repeated IDs
         ids = np.unique(ids)
 

@@ -2,7 +2,7 @@ from PythonAPI.aik import AIK
 import numpy as np
 
 
-dataset_dir = '/home/beatriz/Documentos/Work'   # For Bea
+dataset_dir = '/home/beatriz/Documentos/Work/final_datasets'   # For Bea
 # dataset_dir = '/home/almartmen/Github/aikapi'   # For Alberto
 dataset_name = '181129'
 
@@ -31,3 +31,4 @@ aik = AIK(dataset_dir, dataset_name, image_format='png')
 # aik.unroll_videos()
 print(aik.get_total_cameras())
 print(aik.get_total_frames())
+print(aik.get_persons_in_frame(aik.get_total_frames()))
