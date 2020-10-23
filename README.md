@@ -1,5 +1,5 @@
-# AIKAPI
-This project contains the API to load and interact with **Action In Kitchen** datasets. (WIP)
+# Bonn Activity Maps (BAM) API
+This project contains the API to load and interact with **Bonn Activity Maps** datasets. (WIP)
 
 ## General information about the datasets
 - The framerate of the videos is 25 Hz.
@@ -8,17 +8,17 @@ This project contains the API to load and interact with **Action In Kitchen** da
 
 1. Clone or download the repository.
 2. Install the required Python3 packages with: `pip3 install -r requirements.txt`
-3. Place the AIK dataset folders at the same level as **PythonAPI** folder.
+3. Place the BAM dataset folders at the same level as **PythonAPI** folder.
 
-## AIK class functions
-#### AIK(dataset_dir, dataset_name, image_format)
-Constructor for the AIK class used to perform all actions over the dataset.
+## BAM class functions
+#### BAM(dataset_dir, dataset_name, image_format)
+Constructor for the BAM class used to perform all actions over the dataset.
 - **Parameters**:
   - **datset_dir**: (*String*) path to the folder containing the datasets.
   - **dataset_name**: (*String*) name of the dataset folder.
   - **image_format**: (*String, Optional*) format wanted for the image extraction. "png"/"jpeg". *default*=`"png"`
 - **Returns**:
-  - (*AIK Object*) object to perform operations over the dataset
+  - (*BAM Object*) object to perform operations over the dataset
 ___
 #### unroll_videos(force, video)
 Unrolls (converts each frame to an individial image) all the videos from the dataset and stores them in the `videos` folder. This folder will be created if it not exists and will contain another 12 folders (cameraXX), each one containing the unrolled frames for the camera noted with XX.
