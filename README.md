@@ -1,5 +1,5 @@
-# AIKAPI
-This project contains the API to load and interact with **Action In Kitchen** datasets. (WIP)
+# Bonn Activity Maps (BAM) API
+This project contains the API to load and interact with **Bonn Activity Maps** datasets. (WIP)
 
 ## General information about the datasets
 - The framerate of the videos is 25 Hz.
@@ -8,9 +8,9 @@ This project contains the API to load and interact with **Action In Kitchen** da
 
 1. Clone or download the repository.
 2. Install the required Python3 packages with: `pip3 install -r requirements.txt`
-3. Place the AIK dataset folders at the same level as **PythonAPI** folder.
+3. Place the BAM dataset folders at the same level as **PythonAPI** folder.
 
-## AIK class functions
+## BAM class functions
 #### AIK(dataset_dir, dataset_name, image_format)
 Constructor for the AIK class used to perform all actions over the dataset.
 - **Parameters**:
