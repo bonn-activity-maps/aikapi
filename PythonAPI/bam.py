@@ -12,11 +12,11 @@ from PythonAPI.utils.camera import Camera
 kp = TypeVar('kp', float, float, float)
 
 
-class AIK:
+class BAM:
 
     def __init__(self, dataset_dir: str, dataset_name: str, image_format: str = 'png') -> None:
         """
-            Constructor for AIK class for reading and visualizing annotations.
+            Constructor for BAM class for reading and visualizing annotations.
 
         :param dataset_dir: absolute path to the folder containing the datasets
         :param dataset_name: name of the dataset folder
