@@ -233,7 +233,7 @@ class BAM:
                 persons.append([])
 
         # Make sure that there are no repeated IDs
-        ids = np.unique(ids)
+        ids = np.unique(np.array(ids, dtype=np.int))
 
         return np.array(persons, dtype=object), ids
 
