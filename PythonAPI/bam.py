@@ -58,10 +58,10 @@ class BAM:
         os.mkdir(camera_dir)
 
         if self.image_format == 'jpeg':
-            unroll = subprocess.run(["ffmpeg", "-i", os.path.join(self.dataset_dir, video_file), "-qscale:v", "2",
+            unroll = subprocess.run(["ffmpeg", "-i", os.path.join(self.dataset_dir, video_file), "-qscale:v", "2", "-vf", "scale=1280:720",
                                      os.path.join(camera_dir, self.frame_format + "." + self.image_format)])
         else:
-            unroll = subprocess.run(["ffmpeg", "-i", os.path.join(self.dataset_dir, video_file),
+            unroll = subprocess.run(["ffmpeg", "-i", os.path.join(self.dataset_dir, video_file), "-vf", "scale=1280:720",
                                      os.path.join(camera_dir, self.frame_format + "." + self.image_format)])
         # print("The exit code was: %d" % unroll.returncode)
 
@@ -469,14 +469,17 @@ class BAM:
         
         print("Frame name: " + frame_name)
 
-        # Get the paths to all cameras inside the videos folder
+        # Get the paths to all cameras inside the videos folder sorted by name
         cameras_paths = [os.path.join(self.videos_dir, name) for name in os.listdir(self.videos_dir) if os.path.isdir(os.path.join(self.videos_dir,name))]
-        
+        cameras_paths.sort()
+
         # Get the frame_name image from those paths
         images = []
+        print(cameras_paths)
 
         for path in cameras_paths:
             image = cv2.imread(os.path.join(path, frame_name), cv2.IMREAD_COLOR)
+            print(os.path.join(path, frame_name))
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             images.append(image)
 
@@ -507,5 +510,62 @@ class BAM:
         """
         return self.num_cameras
 
+    def get_annotations_for_person(self, person_id: int) -> np.ndarray:
+        """
+            Gets all annotations in the dataset for person_id.
 
+        :param person_id: person identifier
+        :returns: Numpy array with all annotations for person in json format if exists, empty array otherwise
+        """
+        return self._get_annotations_for_person_or_pose(person_id, 'personAIK')
+
+    def get_annotations_for_pose(self, person_id: int) -> np.ndarray:
+        """
+            Gets all pose annotations in the dataset for person_id.
+
+        :param person_id: person identifier
+        :returns: Numpy array with all pose annotations for person in json format if exists, empty array otherwise
+        """
+        return self._get_annotations_for_person_or_pose(person_id, 'poseAIK')
+
+    def _get_annotations_for_person_or_pose(self, person_id: int, obj_type: str) -> np.ndarray:
+        """
+            Gets all annotations for person_id and obj_type in the whole dataset.
+
+        :param person_id: person identifier
+        :param obj_type: poseAIK or personAIK
+        :returns: Numpy array with all person or pose annotations for person_id in json format if exists, empty array otherwise
+        """
+        annotations = []
+        for frame in range(self.get_total_frames()):
+            annotated, real_frame, next_frame = self._get_real_frame(frame)
+            if annotated:
+                for a in self.persons[real_frame]:
+                    if a['pid'] == person_id and a['type'] == obj_type and len(a['location']) != 0:
+                        a['frame'] = frame
+                        annotations.append(a)
+            else:
+                # Interpolate between two frames
+                frame_annotation = self.persons[real_frame]
+                p1, p2 = {}, {}
+                for a in frame_annotation:
+                    if a['pid'] == person_id and a['type'] == obj_type:
+                        p1 = a
+                        break
+                frame_annotation = self.persons[next_frame]
+                for a in frame_annotation:
+                    if a['pid'] == person_id and a['type'] == obj_type:
+                        p2 = a
+                        break
+                # Interpolate only if the person exists in both frames
+                if p1 and p2 and len(p1['location']) == len(p2['location']) and len(p1['location']) != 0:
+                    interpolated_person = self._interpolate(p1['location'], p2['location'])
+                    person_json = {
+                        'type': p1['type'],
+                        'location': interpolated_person.tolist(),
+                        'pid': p1['pid'],
+                        'frame': frame
+                    }
+                    annotations.append(person_json)
+        return np.array(annotations)
 
