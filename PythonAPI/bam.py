@@ -40,7 +40,7 @@ class BAM:
 
         # Load info to memory
         self.calibration_params = self._read_calibration_params()
-        self.persons, self.objects, self.activities, self.ids = self._read_annotations()
+        self.persons, self.objects, self.activities, self.person_ids, self.object_ids = self._read_annotations()
 
         print('Finish loading dataset')
 
@@ -173,7 +173,7 @@ class BAM:
             cameras_data.append(data)
         return np.array(cameras_data, dtype=object)
 
-    def _read_annotations(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _read_annotations(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
             Reads persons, objects, actions and ids information from file.
 
@@ -184,19 +184,17 @@ class BAM:
             json_data = json.load(f)
 
         # Process and separate data into persons, objects and activities
-        persons, ids = self._process_persons(json_data['persons'])
+        persons, person_ids = self._process_persons(json_data['persons'])
         del json_data['persons']
 
-        # print('Processing objects...')
-        objects = np.array([])
-        # for d in json_data['objects']:
-        #     objects.append(d)
+        # objects = np.array([])
+        objects, object_ids = self._process_objects(json_data['objects'])
         del json_data['objects']
 
         activities = self._process_activities(json_data['actions'])
         del json_data['actions']
 
-        return persons, objects, activities, ids
+        return persons, objects, activities, person_ids, object_ids
 
     def _process_persons(self, persons_json: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -236,6 +234,45 @@ class BAM:
         ids = np.unique(np.array(ids, dtype=np.int))
 
         return np.array(persons, dtype=object), ids
+
+    def _process_objects(self, objects_json: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+            Process objects ordered by frame.
+
+        :param objects_json: numpy array with jsons that contain objects information
+        :returns: tuple with numpy arrays with object info and ids in json format for each frame
+        """
+        print('Processing objects...')
+        objects = []
+        ids = []
+        last_frame = -1
+        for d in objects_json:
+            frame = d['frame']
+
+            # Complete if there are empty frames in between
+            if frame > last_frame + 1:
+                for i in range(last_frame + 1, frame):
+                    objects.append([])
+
+            # Add objects in current frame
+            objects_in_frame = d['objects']
+
+            # Get the ids of the annotated objects
+            for obj in objects_in_frame:
+                ids.append(obj['oid'])
+
+            objects.append(objects_in_frame)
+            last_frame = frame
+
+        # Add empty frames at the end if the dataset has unnanotated frames to avoid errors
+        if len(objects) <= self.num_frames // 2:
+            for i in range(len(objects), self.num_frames // 2 + 1):
+                objects.append([])
+
+        # Make sure that there are no repeated IDs
+        ids = np.unique(np.array(ids, dtype=np.int))
+
+        return np.array(objects, dtype=object), ids
 
     def _process_activities(self, activities_json: np.ndarray) -> np.ndarray:
         """
@@ -334,7 +371,7 @@ class BAM:
         :param frame: frame number
         :returns: Poses annotated in the given frame in json format
         """
-        return self._get_persons_or_poses_in_frame(frame, 'poseAIK')
+        return self._get_objects_in_frame(frame, np.array(['poseAIK']), 'pid', self.persons)
 
     def get_persons_in_frame(self, frame: int) -> np.ndarray:
         """
@@ -343,39 +380,60 @@ class BAM:
         :param frame: frame number
         :returns: Persons annotated in the given frame in json format
         """
-        return self._get_persons_or_poses_in_frame(frame, 'personAIK')
+        return self._get_objects_in_frame(frame, np.array(['personAIK']), 'pid', self.persons)
 
-    def _get_persons_or_poses_in_frame(self, frame: int, obj_type: str) -> np.ndarray:
+    def get_static_objects_in_frame(self, frame: int) -> np.ndarray:
         """
-            Gets all persons or poses annotated in the given frame. Interpolates keypoints if the frame is not annotated
+            Gets all objects annotated in the given frame. Interpolates keypoints if the frame is not annotated
 
         :param frame: frame number
-        :param obj_type: poseAIK or personAIK
-        :returns: Persons or poses annotated in the given frame in json format
+        :returns: Objects annotated in the given frame in json format
         """
+        obj_types = np.array(['boxAIK', 'cylinderAIK'])
+        return self._get_objects_in_frame(frame, obj_types, 'oid', self.objects)
+
+    def _get_objects_in_frame(self, frame: int, obj_types: np.ndarray, id_type: str, original_objects: np.ndarray) -> np.ndarray:
+        """
+            Gets all objects with types in obj_types annotated in the given frame. Interpolates keypoints if the frame is not annotated
+
+        :param frame: frame number
+        :param obj_types: Array with poseAIK, personAIK, boxAIK or cylinderAIK
+        :param id_type: key for id in json. pid for persons and poses, oid for objects
+        :param original_objects: array where objects are searched. persons array for persons or poses, objects array for objects
+        :returns: Objects of obj_types annotated in the given frame in json format
+        """
+        # If we need to look for personAIK or poseAIK, only 1 element is allowed in the obj_type array
+        # to avoid error because persons and poses has the same pid
+        if 'personAIK' in obj_types or 'poseAIK' in obj_types:
+            assert len(obj_types) == 1, "Only 1 object type admitted when getting objects in frame"
+
         annotated, real_frame, next_frame = self._get_real_frame(frame)
+
         if annotated:
             objects = []
-            for a in self.persons[real_frame]:
-                if a['type'] == obj_type:
+            for a in original_objects[real_frame]:
+                if a['type'] in obj_types:
                     objects.append(a)
             return np.array(objects)
         else:
-            persons = []
-            # Interpolate all persons
-            for p1 in self.persons[real_frame]:
-                for p2 in self.persons[next_frame]:
-                    if p1['pid'] == p2['pid'] and len(p1['location']) == len(p2['location']) \
-                            and p1['type'] == obj_type and p2['type'] == obj_type:
+            objects = []
+            # Interpolate all objects
+            for p1 in original_objects[real_frame]:
+                for p2 in original_objects[next_frame]:
+                    if p1[id_type] == p2[id_type] and len(p1['location']) == len(p2['location']) \
+                            and p1['type'] in obj_types and p2['type'] in obj_types:
                         interpolated_person = self._interpolate(p1['location'], p2['location'])
-                        person_json = {
-                            'pid': p1['pid'],
+                        object_json = {
+                            id_type: p1[id_type],
                             'location': interpolated_person.tolist(),
                             'type': p1['type']
                         }
-                        persons.append(person_json)
+                        # Add labels to interpolated object if it exists in other frames
+                        if 'labels' in p1:
+                            object_json['labels'] = p1['labels']
+                        objects.append(object_json)
                         break
-            return np.array(persons)
+            return np.array(objects)
 
     def get_person_in_frame(self, frame: int, person_id: int) -> np.ndarray:
         """
@@ -385,7 +443,7 @@ class BAM:
         :param person_id: person identifier
         :returns: Person annotated in the given frame in json format if exists, empty array otherwise
         """
-        return self._get_person_or_pose_in_frame(frame, person_id, 'personAIK')
+        return self._get_object_in_frame(frame, person_id, np.array(['personAIK']), 'pid', self.persons)
 
     def get_pose_in_frame(self, frame: int, person_id: int) -> np.ndarray:
         """
@@ -395,39 +453,58 @@ class BAM:
         :param person_id: person identifier
         :returns: Pose in json format if exists, empty array otherwise
         """
-        return self._get_person_or_pose_in_frame(frame, person_id, 'poseAIK')
+        return self._get_object_in_frame(frame, person_id, np.array(['poseAIK']), 'pid', self.persons)
 
-    def _get_person_or_pose_in_frame(self, frame: int, person_id: int, obj_type: str) -> np.ndarray:
+    def get_static_object_in_frame(self, frame: int, object_id: int) -> np.ndarray:
+        """
+            Gets static object annotation for object_id in the given frame.
+
+        :param frame: frame number
+        :param object_id: object identifier
+        :returns: Object in json format if exists, empty array otherwise
+        """
+        obj_types = np.array(['boxAIK', 'cylinderAIK'])
+        return self._get_object_in_frame(frame, object_id, obj_types, 'oid', self.objects)
+
+    def _get_object_in_frame(self, frame: int, object_id: int, obj_types: np.array, id_type: str,
+                             original_objects: np.ndarray) -> np.ndarray:
         """
             Gets annotation for person_id in the given frame.
 
         :param frame: frame number
-        :param person_id: person identifier
-        :param obj_type: poseAIK or personAIK
-        :returns: Person/Pose annotated in the given frame in json format if exists, empty array otherwise
+        :param object_id: person identifier
+        :param obj_types: Array with poseAIK, personAIK, boxAIK or cylinderAIK
+        :param id_type: key for id in json. pid for persons and poses, oid for objects
+        :param original_objects: array where objects are searched. persons array for persons or poses, objects array for objects
+        :returns: Objects annotated in the given frame in json format if exists, empty array otherwise
         """
+        # If we need to look for personAIK or poseAIK, only 1 element is allowed in the obj_type array
+        # to avoid error because persons and poses has the same pid
+        if 'personAIK' in obj_types or 'poseAIK' in obj_types:
+            assert len(obj_types) == 1, "Only 1 object type admitted when getting objects in frame"
+
         annotated, real_frame, next_frame = self._get_real_frame(frame)
         if annotated:
-            frame_annotation = self.persons[real_frame]
+            frame_annotation = original_objects[real_frame]
             for a in frame_annotation:
-                if a['pid'] == person_id and a['type'] == obj_type:
+                if a[id_type] == object_id and a['type'] in obj_types:
                     # Substitute empty lists with None
                     pts3d = [x if x else [None, None, None] for x in a['location']]
                     return np.array(pts3d)
         else:
             p1, p2 = [], []
             # Search keypoints in previous and next frame to interpolate
-            frame_annotation = self.persons[real_frame]
+            frame_annotation = original_objects[real_frame]
             for a in frame_annotation:
-                if a['pid'] == person_id and a['type'] == obj_type:
+                if a[id_type] == object_id and a['type'] in obj_types:
                     p1 = a['location']
                     break
-            frame_annotation = self.persons[next_frame]
+            frame_annotation = original_objects[next_frame]
             for a in frame_annotation:
-                if a['pid'] == person_id and a['type'] == obj_type:
+                if a[id_type] == object_id and a['type'] in obj_types:
                     p2 = a['location']
                     break
-            # Interpolate only if the person exists in both frames
+            # Interpolate only if the object exists in both frames
             if p1 and p2:
                 return self._interpolate(p1, p2)
 
@@ -492,7 +569,15 @@ class BAM:
 
         :returns: Numpy array with the existing IDs of the persons in the dataset
         """
-        return self.ids
+        return self.person_ids
+
+    def get_static_object_ids(self) -> np.ndarray:
+        """
+            Returns the existing object ids in the dataset
+
+        :returns: Numpy array with the existing IDs of the objects in the dataset
+        """
+        return self.object_ids
 
     def get_total_frames(self) -> int:
         """
@@ -517,7 +602,7 @@ class BAM:
         :param person_id: person identifier
         :returns: Numpy array with all annotations for person in json format if exists, empty array otherwise
         """
-        return self._get_annotations_for_person_or_pose(person_id, 'personAIK')
+        return self._get_annotations_for_person_or_pose(person_id, np.array(['personAIK']))
 
     def get_annotations_for_pose(self, person_id: int) -> np.ndarray:
         """
@@ -526,7 +611,69 @@ class BAM:
         :param person_id: person identifier
         :returns: Numpy array with all pose annotations for person in json format if exists, empty array otherwise
         """
-        return self._get_annotations_for_person_or_pose(person_id, 'poseAIK')
+        return self._get_annotations_for_person_or_pose(person_id, np.array(['poseAIK']))
+
+    def get_annotations_for_static_object(self, object_id: int) -> np.ndarray:
+        """
+            Gets all annotations in the dataset for object_id.
+
+        :param object_id: object identifier
+        :returns: Numpy array with all annotations for object in json format if exists, empty array otherwise
+        """
+        obj_types = np.array(['boxAIK', 'cylinderAIK'])
+        return self._get_annotations_for_object(object_id, obj_types, 'oid', self.objects)
+
+    def _get_annotations_for_object(self, object_id: int, obj_types: np.ndarray, id_type: str,
+                                    original_objects: np.ndarray) -> np.ndarray:
+        """
+            Gets all annotations for object_id and obj_type in the whole dataset.
+
+        :param object_id: object identifier
+        :param obj_types: Array with poseAIK, personAIK, boxAIK or cylinderAIK
+        :param id_type: key for id in json. pid for persons and poses, oid for objects
+        :param original_objects: array where objects are searched. persons array for persons or poses, objects array for objects
+        :returns: Numpy array with all objects annotations for object_id in json format if exists, empty array otherwise
+        """
+        # If we need to look for personAIK or poseAIK, only 1 element is allowed in the obj_type array
+        # to avoid error because persons and poses has the same pid
+        if 'personAIK' in obj_types or 'poseAIK' in obj_types:
+            assert len(obj_types) == 1, "Only 1 object type admitted when getting objects in frame"
+
+        annotations = []
+        for frame in range(self.get_total_frames()):
+            annotated, real_frame, next_frame = self._get_real_frame(frame)
+            if annotated:
+                for a in original_objects[real_frame]:
+                    if a[id_type] == object_id and a['type'] in obj_types and len(a['location']) != 0:
+                        a['frame'] = frame
+                        annotations.append(a)
+            else:
+                # Interpolate between two frames
+                frame_annotation = original_objects[real_frame]
+                p1, p2 = {}, {}
+                for a in frame_annotation:
+                    if a[id_type] == object_id and a['type'] in obj_types:
+                        p1 = a
+                        break
+                frame_annotation = original_objects[next_frame]
+                for a in frame_annotation:
+                    if a[id_type] == object_id and a['type'] in obj_types:
+                        p2 = a
+                        break
+                # Interpolate only if the person exists in both frames
+                if p1 and p2 and len(p1['location']) == len(p2['location']) and len(p1['location']) != 0:
+                    interpolated_person = self._interpolate(p1['location'], p2['location'])
+                    object_json = {
+                        'type': p1['type'],
+                        'location': interpolated_person.tolist(),
+                        id_type: p1[id_type],
+                        'frame': frame
+                    }
+                    # Add labels to interpolated object if it exists in other frames
+                    if 'labels' in p1:
+                        object_json['labels'] = p1['labels']
+                    annotations.append(object_json)
+        return np.array(annotations)
 
     def _get_annotations_for_person_or_pose(self, person_id: int, obj_type: str) -> np.ndarray:
         """
