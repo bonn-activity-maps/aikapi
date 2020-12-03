@@ -35,11 +35,12 @@ print(bam.get_total_cameras())
 print(bam.get_total_frames())
 print(bam.get_person_ids())
 print(bam.get_static_object_ids())
+# print(bam.get_activity_names())
 
 # print(bam.get_annotations_for_person(19))
-
-p = bam.get_annotations_for_person(1)
-print(p)
+print(bam.get_persons_in_frame(1))
+# p = bam.get_annotations_for_person(1)
+# print(p)
 
 ### OBJECTS
 # print(bam.get_static_objects_in_frame(2))

@@ -40,7 +40,8 @@ class BAM:
 
         # Load info to memory
         self.calibration_params = self._read_calibration_params()
-        self.persons, self.objects, self.activities, self.person_ids, self.object_ids = self._read_annotations()
+        self.persons, self.objects, self.activities, self.person_ids, self.object_ids, self.activity_names = \
+            self._read_annotations()
 
         print('Finish loading dataset')
 
@@ -173,7 +174,7 @@ class BAM:
             cameras_data.append(data)
         return np.array(cameras_data, dtype=object)
 
-    def _read_annotations(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def _read_annotations(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
             Reads persons, objects, actions and ids information from file.
 
@@ -191,10 +192,10 @@ class BAM:
         objects, object_ids = self._process_objects(json_data['objects'])
         del json_data['objects']
 
-        activities = self._process_activities(json_data['actions'])
+        activities, activity_names = self._process_activities(json_data['actions'])
         del json_data['actions']
 
-        return persons, objects, activities, person_ids, object_ids
+        return persons, objects, activities, person_ids, object_ids, activity_names
 
     def _process_persons(self, persons_json: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -274,21 +275,26 @@ class BAM:
 
         return np.array(objects, dtype=object), ids
 
-    def _process_activities(self, activities_json: np.ndarray) -> np.ndarray:
+    def _process_activities(self, activities_json: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
             Process activities json and order by person id.
 
         :param activities_json: numpy array with jsons that contain activities information
-        :returns: numpy array with activities info ordered by person id
+        :returns: numpy array with activities info ordered by person id and all activities available in dataset
         """
         print('Processing actions...')
         activities = [[] for i in range(self.max_persons)]  # Initialize with empty activities
+        activity_names = []
 
         for d in activities_json:
             pid = d['pid']
             del d['pid']
             activities[pid].append(d)
-        return np.array(activities, dtype=object)
+            activity_names.append(d['label'])
+
+        # Make sure that there are no repeated activities
+        activity_names = np.unique(np.array(activity_names, dtype=np.str))
+        return np.array(activities, dtype=object), activity_names
 
     def _get_real_frame(self, frame: int) -> Tuple[bool, int, int]:
         """
@@ -578,6 +584,14 @@ class BAM:
         :returns: Numpy array with the existing IDs of the objects in the dataset
         """
         return self.object_ids
+
+    def get_activity_names(self) -> np.ndarray:
+        """
+            Returns the existing activities in the dataset
+
+        :returns: Numpy array with the existing activity names in the dataset
+        """
+        return self.activity_names
 
     def get_total_frames(self) -> int:
         """
