@@ -6,6 +6,7 @@ import json
 import numpy as np
 import cv2
 import shutil
+from scipy.spatial.transform import Rotation as R
 from typing import Optional, Tuple, Union, List, TypeVar
 from PythonAPI.utils.camera import Camera
 
@@ -636,6 +637,186 @@ class BAM:
         """
         obj_types = np.array(['boxAIK', 'cylinderAIK'])
         return self._get_annotations_for_object(object_id, obj_types, 'oid', self.objects)
+
+
+    def distance_to_static_object(self, object_type: str, object_points: np.ndarray, point: np.ndarray) -> np.ndarray:
+        """
+            Calculate the distance vector (direction is the vector and distance is the module) between a point defined by 'point'
+            and the object defined by 'object_points'
+
+
+        :param object_type: type of the static object 'boxAIK' or 'cylinderAIK'
+        :param object_points: array with the annotated 3D points of the static object
+        :param point: 3D point for which we want to obtain the distance to the object
+        :returns: Numpy array with the distance vector between the points and the object. If the point is inside of the object, the vector
+                  returned will be [0,0,0]
+        """
+        
+        if object_type == 'boxAIK':
+            # ["tfl", "tfr", "tbl", "tbr", "bfl", "bfr", "bbl", "bbr"]
+            box3D = self._create_box(object_points[0], object_points[1], object_points[2])
+
+            # Focusing on the botom front left corner of the cube we will obtain the local coordinate system
+            x_vector = (box3D[5] - box3D[4]) # bfr - bfl
+            y_vector = (box3D[0] - box3D[4]) # tfl - bfl
+            z_vector = (box3D[6] - box3D[4]) # bbl - bfl
+
+            x_local = x_vector / np.linalg.norm(x_vector)
+            y_local = y_vector / np.linalg.norm(y_vector)
+            z_local = z_vector / np.linalg.norm(z_vector)
+
+            # Now we have to find the rotation to align our local coordinate system with the world coordinate system
+            rotation, _ = R.align_vectors([[1,0,0],[0,1,0],[0,0,1]], [x_local, y_local, z_local])
+
+            # Now we can apply the rotation to the box coordinates and to the point
+            box3D_a = rotation.apply(box3D)
+            point_a = rotation.apply(point)
+
+            # Find the limits of the rotated box
+            x_array = box3D_a[:,0]
+            y_array = box3D_a[:,1]
+            z_array = box3D_a[:,2]
+
+            min_x = np.min(x_array)
+            max_x = np.max(x_array)
+            min_y = np.min(y_array)
+            max_y = np.max(y_array)
+            min_z = np.min(z_array)
+            max_z = np.max(z_array)
+            
+            # First check if the point is inside, to directly return [0,0,0]
+            if (point_a[0] > min_x and point_a[0] < max_x) and (point_a[1] > min_y and point_a[1] < max_y) and (point_a[2] > min_z and point_a[2] < max_z):
+                return [0,0,0]
+
+            # If its not inside, we calculate the closest point within the cube
+            closest_point = [0,0,0]
+
+            # X coordinate
+            if point_a[0] < min_x:
+                closest_point[0] = min_x
+            elif point_a[0] > max_x:
+                closest_point[0] = max_x
+            else:
+                closest_point[0] = point_a[0]
+
+            # Y coordinate
+            if point_a[1] < min_y:
+                closest_point[1] = min_y
+            elif point_a[1] > max_y:
+                closest_point[1] = max_y
+            else:
+                closest_point[1] = point_a[1]
+            
+            # Z coordinate
+            if point_a[2] < min_z:
+                closest_point[2] = min_z
+            elif point_a[2] > max_z:
+                closest_point[2] = max_z
+            else:
+                closest_point[2] = point_a[2]
+
+            # Then return the distance
+            distance = (closest_point - point_a)
+            return distance
+            
+        elif object_type == 'cylinderAIK':
+            # For the cylinderAIK we have 2 points, top face center and top face radius point
+            center_top = object_points[0]
+            radius_top = object_points[1]
+            
+            # Radius of the top face, will be used later
+            radius_distance = np.linalg.norm(center_top - radius_top)
+
+            # Check if the point is above the cylinder
+            if point[1] > center_top[1]:
+                # Check if the point is also inside of the silhouette of the top circle
+                center_top_2D = np.asarray([center_top[0], center_top[2]])
+                radius_top_2D = np.asarray([radius_top[0], radius_top[2]])
+                point_2D = np.asarray([point[0], point[2]])
+
+                radius_distance_2D = np.linalg.norm(center_top_2D - radius_top_2D)
+                distance_2D = np.linalg.norm(center_top_2D - point_2D)
+
+                if distance_2D < radius_distance_2D:
+                    # Inside the silhouette. We just need to check the distance to the top face surface
+                    # Obtain the projection of the point into the surface plane by changing the Y value of the point
+                    projected_point = np.asarray([point[0], center_top[1], point[2]])
+                    # Then calculate the distance between the original point and the projected one
+                    distance = (projected_point - point)
+                    return distance
+                else: 
+                    # Outside the silhouette. We need to find the point in the top surface radius closest to the point
+                    # Obtain the projection of the point into the surface plane by changing the Y value of the point
+                    projected_point = np.asarray([point[0], center_top[1], point[2]])
+                    # Obtain the directional normalized vector between the center of the surface and the projected point
+                    direction_vector = (projected_point - center_top)
+                    direction = direction_vector / np.linalg.norm(direction_vector)
+                    # Multiply the direction by the radius of the surface to obtain the closest point on the edge
+                    closest_point = direction * radius_distance
+                    # Now we can just check the distance between the points
+                    distance = (closest_point - point)
+                    return distance
+            else:
+                # Find the cylinder center point at the same height as the outside point
+                center_point = np.asarray([center_top[0], point[1], center_top[2]])
+                # Obtain the directional normalized vector between the new center of the object and the point
+                direction_vector = (point - center_point)
+                direction = direction_vector / np.linalg.norm(direction_vector)
+                # Multiply the direction by the radius to obtain the edge point of the object closest to the outside point 
+                closest_point = direction * radius_distance
+                # Now we can check the distance between the points
+                distance = (closest_point - point)
+                return distance
+
+    def _create_box(self, a, b, c):
+        """
+        Auxiliar function that given the 3 points stored for a boxAIK object will generate the 8 coordinates of the corners of the box
+
+        :param a: (x, y, z) top-left point
+        :param b: (x, y, z) top-right point
+        :param c: (x, y, z) bottom-left or bottom-right point
+        """
+        proj_to_xy = lambda x: x[:2]
+        get_angle = lambda x,y: (x @ y) / (la.norm(x) * la.norm(y))
+
+        ab = proj_to_xy(b) - proj_to_xy(a)
+        ac = proj_to_xy(c) - proj_to_xy(a)
+        bc = proj_to_xy(c) - proj_to_xy(b)
+
+        ab_ac = np.abs(get_angle(ab, ac))
+        ab_bc = np.abs(get_angle(ab, bc))
+
+        x1, y1, z1 = a
+        x2, y2, z2 = b
+        x3, y3, z3 = c
+
+        z = (z1 + z2)/2
+
+        down = np.array([0., 0., z - z3])
+
+        if ab_ac < ab_bc:  # 3. point is bottom-left
+            back = np.array([ac[0], ac[1], 0])
+        else:  # 3. point is bottom-right
+            back = np.array([bc[0], bc[1], 0])
+
+        tfl = np.array([x1, y1, z])
+        tfr = np.array([x2, y2, z])
+
+        tbl = tfl + back
+        tbr = tfr + back
+
+        bfl = tfl - down
+        bfr = tfr - down
+
+        bbl = bfl + back
+        bbr = bfr + back
+
+        return np.array([
+            tfl, tfr,
+            tbl, tbr,
+            bfl, bfr,
+            bbl, bbr
+        ])
 
     def _get_annotations_for_object(self, object_id: int, obj_types: np.ndarray, id_type: str,
                                     original_objects: np.ndarray) -> np.ndarray:
