@@ -141,6 +141,16 @@ ___
   - **person_id**: (*Integer*) person identifier.
 - **Returns**:
   - (*numpy[activityJSON]*) numpy array with activities for the specified person in JSON format (for the structure of the JSON see section **JSON structures**)
+___
+#### distance_to_static_object(static_object_type, static_object_points, point)
+Calculates the distance vector between a point and a static object's closest point to that point.
+- **Parameters**:
+  - **static_object_type**: (*String*) static object type string (boxAIK or cylinderAIK).
+  - **static_object_points**: (*numpy*) static object's points as stored in the dataset.
+  - **point**: (*numpy*) point for which we want to calculate the distance to.
+- **Returns**:
+  - (*numpy*) numpy array representing the minimum distance between the point and the object (the vector is the direction and its module the distance magnitude). If the point lies inside of the object it returns [0,0,0].
+
 ## Camera class functions
 #### get_C()
 - **Returns**:
