@@ -658,8 +658,8 @@ class BAM:
 
             # Focusing on the botom front left corner of the cube we will obtain the local coordinate system
             x_vector = (box3D[5] - box3D[4]) # bfr - bfl
-            y_vector = (box3D[0] - box3D[4]) # tfl - bfl
-            z_vector = (box3D[6] - box3D[4]) # bbl - bfl
+            y_vector = (box3D[6] - box3D[4]) # tfl - bfl
+            z_vector = (box3D[0] - box3D[4]) # bbl - bfl
 
             x_local = x_vector / np.linalg.norm(x_vector)
             y_local = y_vector / np.linalg.norm(y_vector)
@@ -714,7 +714,7 @@ class BAM:
                 closest_point[2] = max_z
             else:
                 closest_point[2] = point_a[2]
-
+            
             # Then return the distance
             distance = (closest_point - point_a)
             return distance
@@ -728,42 +728,42 @@ class BAM:
             radius_distance = np.linalg.norm(center_top - radius_top)
 
             # Check if the point is above the cylinder
-            if point[1] > center_top[1]:
+            if point[2] >= center_top[2]:
                 # Check if the point is also inside of the silhouette of the top circle
-                center_top_2D = np.asarray([center_top[0], center_top[2]])
-                radius_top_2D = np.asarray([radius_top[0], radius_top[2]])
-                point_2D = np.asarray([point[0], point[2]])
+                center_top_2D = np.asarray([center_top[0], center_top[1]])
+                radius_top_2D = np.asarray([radius_top[0], radius_top[1]])
+                point_2D = np.asarray([point[0], point[1]])
 
                 radius_distance_2D = np.linalg.norm(center_top_2D - radius_top_2D)
                 distance_2D = np.linalg.norm(center_top_2D - point_2D)
 
-                if distance_2D < radius_distance_2D:
+                if distance_2D <= radius_distance_2D:
                     # Inside the silhouette. We just need to check the distance to the top face surface
-                    # Obtain the projection of the point into the surface plane by changing the Y value of the point
-                    projected_point = np.asarray([point[0], center_top[1], point[2]])
+                    # Obtain the projection of the point into the surface plane by changing the Z value of the point
+                    projected_point = np.asarray([point[0], point[1], center_top[2]])
                     # Then calculate the distance between the original point and the projected one
                     distance = (projected_point - point)
                     return distance
                 else: 
                     # Outside the silhouette. We need to find the point in the top surface radius closest to the point
                     # Obtain the projection of the point into the surface plane by changing the Y value of the point
-                    projected_point = np.asarray([point[0], center_top[1], point[2]])
+                    projected_point = np.asarray([point[0], point[1], center_top[2]])
                     # Obtain the directional normalized vector between the center of the surface and the projected point
                     direction_vector = (projected_point - center_top)
                     direction = direction_vector / np.linalg.norm(direction_vector)
                     # Multiply the direction by the radius of the surface to obtain the closest point on the edge
-                    closest_point = direction * radius_distance
+                    closest_point = center_top + (direction * radius_distance)
                     # Now we can just check the distance between the points
                     distance = (closest_point - point)
                     return distance
             else:
                 # Find the cylinder center point at the same height as the outside point
-                center_point = np.asarray([center_top[0], point[1], center_top[2]])
+                center_point = np.asarray([center_top[0], center_top[1], point[2]])
                 # Obtain the directional normalized vector between the new center of the object and the point
                 direction_vector = (point - center_point)
                 direction = direction_vector / np.linalg.norm(direction_vector)
                 # Multiply the direction by the radius to obtain the edge point of the object closest to the outside point 
-                closest_point = direction * radius_distance
+                closest_point = center_point + (direction * radius_distance)
                 # Now we can check the distance between the points
                 distance = (closest_point - point)
                 return distance
@@ -777,7 +777,7 @@ class BAM:
         :param c: (x, y, z) bottom-left or bottom-right point
         """
         proj_to_xy = lambda x: x[:2]
-        get_angle = lambda x,y: (x @ y) / (la.norm(x) * la.norm(y))
+        get_angle = lambda x,y: (x @ y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
         ab = proj_to_xy(b) - proj_to_xy(a)
         ac = proj_to_xy(c) - proj_to_xy(a)
