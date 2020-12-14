@@ -183,19 +183,20 @@ class BAM:
         """
         print('Loading annotations...')
         with open(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json')) as f:
-            json_data = json.load(f)
+            # Read file by line: persons, objects, actions
+            for i, json_obj in enumerate(f):
+                json_data = json.loads(json_obj)
 
-        # Process and separate data into persons, objects and activities
-        persons, person_ids = self._process_persons(json_data['persons'])
-        del json_data['persons']
-
-        # objects = np.array([])
-        objects, object_ids = self._process_objects(json_data['objects'])
-        del json_data['objects']
-
-        activities, activity_names = self._process_activities(json_data['actions'])
-        del json_data['actions']
-
+                # Process and separate data into persons, objects and activities
+                if i == 0:
+                    persons, person_ids = self._process_persons(json_data['persons'])
+                elif i == 1:
+                    objects, object_ids = self._process_objects(json_data['objects'])
+                elif i == 2:
+                    activities, activity_names = self._process_activities(json_data['actions'])
+                else:
+                    print('Incorrect format in annotation file')
+                    exit()
         return persons, objects, activities, person_ids, object_ids, activity_names
 
     def _process_persons(self, persons_json: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -216,15 +217,17 @@ class BAM:
             if frame > last_frame + 1:
                 for i in range(last_frame+1, frame):
                     persons.append([])
+            #
+            # Add persons in current frame if there are persons in it
+            if 'persons' in d:
+                persons_in_frame = d['persons']
 
-            # Add persons in current frame
-            persons_in_frame = d['persons']
-            
-            # Get the ids of the annotated persons
-            for person in persons_in_frame:
-                ids.append(person['pid']) 
-            
-            persons.append(persons_in_frame)
+                # Get the ids of the annotated persons
+                for person in persons_in_frame:
+                    ids.append(person['pid'])
+
+                persons.append(persons_in_frame)
+
             last_frame = frame
 
         # Add empty frames at the end if the dataset has unnanotated frames to avoid errors

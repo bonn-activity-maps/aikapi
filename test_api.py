@@ -38,7 +38,7 @@ print(bam.get_static_object_ids())
 # print(bam.get_activity_names())
 
 # print(bam.get_annotations_for_person(19))
-print(bam.get_persons_in_frame(1))
+print(bam.get_persons_in_frame(1000))
 # p = bam.get_annotations_for_person(1)
 # print(p)
 
