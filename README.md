@@ -209,6 +209,26 @@ Contains:
     'type': 'poseAIK'
 }
 ```
+#### Static object json
+Contains:
+- static object identifier
+- array with 3D coordinates corresponding to the main points of the objects:
+  - boxAIK: [top front left, top front right, bottom back left]
+  - cylinderAIK: [top center, top border] (the bottom part is always in contact with the floor).
+- object type, *boxAIK* or *cylinderAIK*
+- array with labels describing the object
+```
+{
+    'oid': {int}, 
+    'location': [
+                  [x, y, z],
+                  [x, y, z],
+                   ...
+                ],
+    'type': 'boxAIK' or 'cylinderAIK',
+    'labels': ['label1', ...]
+}
+```
 #### Activity json
 Contains:
 - activity name
