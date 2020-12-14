@@ -33,6 +33,11 @@ Returns the existing person ids in the dataset
 - **Returns**:
   - (*numpy*) numpy array with the existing IDs of the persons in the dataset
 ___
+#### get_static_object_ids()
+Returns the existing static object ids in the dataset
+- **Returns**:
+  - (*numpy*) numpy array with the existing IDs of the static objects in the dataset
+___
 #### get_total_frames()
 Returns the total number of frames in the dataset
 - **Returns**:
@@ -42,6 +47,11 @@ ___
 Returns the total number of cameras in the dataset
 - **Returns**:
   - (*int*) total number of cameras in the dataset
+___
+#### get_activity_names()
+Returns the existing activity names in the dataset
+- **Returns**:
+  - (*numpy*) numpy array with the existing activity names in the dataset
 ___
 #### get_images_in_frame(frame)
 Obtains the images for the specified frame in all the cameras.
@@ -75,6 +85,13 @@ Gets the annotation for the specified person in the specified frame
 - **Returns**:
   - (*numpy*) numpy array with the 3d coordinates for the specified person
 ___
+#### get_annotations_for_person(person_id)
+Gets all the annotations for the specified person in the dataset
+- **Parameters**:
+  - **person_id**: (*Integer*) person identifier.
+- **Returns**:
+  - (*numpy[personJSON]*) all annotations for the specified person in JSON format (for the structure of the JSON see section **JSON structures**)
+___
 #### get_poses_in_frame(frame)
 Get all `poses` annotated in the given frame.
 - **Parameters**:
@@ -89,6 +106,35 @@ Gets the pose annotation for the specified person in the specified frame
   - **person_id**: (*Integer*) person identifier.
 - **Returns**:
   - (*numpy*) numpy array with the 3D coordinates for the specified person
+___
+#### get_annotations_for_pose(person_id)
+Gets all the pose annotations for the specified person in the dataset
+- **Parameters**:
+  - **person_id**: (*Integer*) person identifier.
+- **Returns**:
+  - (*numpy[poseJSON]*) all annotated poses for the specified person in JSON format (for the structure of the JSON see section **JSON structures**)
+___
+#### get_static_objects_in_frame(frame)
+Get all `static objects` annotated in the given frame.
+- **Parameters**:
+  - **frame**: (*Integer*) frame number to get the static objects from.
+- **Returns**: 
+  - (*numpy[staticobjectJSON]*) static objects annotated in the given frame in JSON format (for the structure of the JSON see section **JSON structures**)
+___
+#### get_static_object_in_frame(frame, static_object_id)
+Gets the annotation for the specified static object in the specified frame
+- **Parameters**:
+  - **frame**: (*Integer*) frame number to get the static object from.
+  - **static_object_id**: (*Integer*) static object identifier.
+- **Returns**:
+  - (*numpy*) numpy array with the 3D coordinates for the specified static object
+___
+#### get_annotations_for_static_object(static_object_id)
+Gets all the annotations for the specified person in the dataset
+- **Parameters**:
+  - **static_object_id**: (*Integer*) static object identifier.
+- **Returns**:
+  - (*numpy[staticobjectJSON]*) all annotations for the specified static object in JSON format (for the structure of the JSON see section **JSON structures**)
 ___
 #### get_activities_for_person(person_id)
 - **Parameters**:
