@@ -252,5 +252,53 @@ Contains:
 }
 ```
 
+## Data structure
+
+#### Cameras folder
+It contains 12 json files, *cameraXX.json*, with the camera parameters for each camera.
+```
+[
+  {
+    'w': {int},
+    'h': {int},
+    'start_frame': {int},
+    'end_frame': {int},
+    'tvec': [x, y, z],
+    'tvec': [x, y, z],
+    'distCoef': [a, b, c, d, e],
+    'K': [3x3 matrix]
+  }
+]
+```
+#### dataset_unroll.json
+It contains 3 jsons with the annotations for persons, objects and poses for all the videos. The format of each concrete type has been previously explained.
+```
+{
+    'persons': [...]
+}
+{
+    'objects': [...]
+}
+{
+    'actions': [...]
+}
+```
+#### dataset.json
+It contains relevant information about the dataset.
+```
+{
+    'n_cameras': {int},
+    'scale_to_mm': {int},
+    'image_extension': {string},
+    'valid_frames': [...]
+}
+```
+#### Videos
+12 videos, *dataset_XX.mp4*, which are unrolled if it is necessary.
+
+#### Videos folder
+It is created when the videos are unrolled and contains 12 folders, *cameraXX*, with the corresponding frames for each camera.
+
+
 ## Examples
 For examples of how to use the API you can check the Jupyter Notebook [`test_api.ipynb`](https://github.com/bonn-activity-maps/aikapi/blob/master/test_api.ipynb) provided inside the repository.
