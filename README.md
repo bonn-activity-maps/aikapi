@@ -264,7 +264,7 @@ It contains 12 json files, *cameraXX.json*, with the camera parameters for each 
     'start_frame': {int},
     'end_frame': {int},
     'tvec': [x, y, z],
-    'tvec': [x, y, z],
+    'rvec': [x, y, z],
     'distCoef': [a, b, c, d, e],
     'K': [3x3 matrix]
   }
