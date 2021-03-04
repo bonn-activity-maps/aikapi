@@ -657,7 +657,7 @@ class BAM:
         
         if object_type == 'boxAIK':
             # ["tfl", "tfr", "tbl", "tbr", "bfl", "bfr", "bbl", "bbr"]
-            box3D = self._create_box(object_points[0], object_points[1], object_points[2])
+            box3D = self.create_box(object_points[0], object_points[1], object_points[2])
 
             # Focusing on the botom front left corner of the cube we will obtain the local coordinate system
             x_vector = (box3D[5] - box3D[4]) # bfr - bfl
@@ -771,7 +771,7 @@ class BAM:
                 distance = (closest_point - point)
                 return distance
 
-    def _create_box(self, a, b, c):
+    def create_box(self, a, b, c):
         """
         Auxiliar function that given the 3 points stored for a boxAIK object will generate the 8 coordinates of the corners of the box
 
