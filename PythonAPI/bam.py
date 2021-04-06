@@ -300,7 +300,7 @@ class BAM:
         activity_names = np.unique(np.array(activity_names, dtype=np.str))
         return np.array(activities, dtype=object), activity_names
 
-    def _get_real_frame(self, frame: int) -> Tuple[bool, int, int]:
+    def get_real_frame(self, frame: int) -> Tuple[bool, int, int]:
         """
             Gets the real frames or frames that need to be interpolated
 
@@ -417,7 +417,7 @@ class BAM:
         if 'personAIK' in obj_types or 'poseAIK' in obj_types:
             assert len(obj_types) == 1, "Only 1 object type admitted when getting objects in frame"
 
-        annotated, real_frame, next_frame = self._get_real_frame(frame)
+        annotated, real_frame, next_frame = self.get_real_frame(frame)
 
         if annotated:
             objects = []
@@ -493,7 +493,7 @@ class BAM:
         if 'personAIK' in obj_types or 'poseAIK' in obj_types:
             assert len(obj_types) == 1, "Only 1 object type admitted when getting objects in frame"
 
-        annotated, real_frame, next_frame = self._get_real_frame(frame)
+        annotated, real_frame, next_frame = self.get_real_frame(frame)
         if annotated:
             frame_annotation = original_objects[real_frame]
             for a in frame_annotation:
@@ -547,14 +547,14 @@ class BAM:
         if not os.path.exists(self.videos_dir):
             self.unroll_videos()
 
-        print("Searching for images of frame ", frame, "...")
+        # print("Searching for images of frame ", frame, "...")
         # Create the string of the name of the frame that we are going to search for in all camera folders
         frame_name = "frame" + ''.zfill(9)
         frame_string = str(frame)
         number_of_chars = len(frame_string)
         frame_name = frame_name[:-number_of_chars] + frame_string + "." + self.image_format
         
-        print("Frame name: " + frame_name)
+        # print("Frame name: " + frame_name)
 
         # Get the paths to all cameras inside the videos folder sorted by name
         cameras_paths = [os.path.join(self.videos_dir, name) for name in os.listdir(self.videos_dir) if os.path.isdir(os.path.join(self.videos_dir,name))]
@@ -562,15 +562,15 @@ class BAM:
 
         # Get the frame_name image from those paths
         images = []
-        print(cameras_paths)
+        # print(cameras_paths)
 
         for path in cameras_paths:
             image = cv2.imread(os.path.join(path, frame_name), cv2.IMREAD_COLOR)
-            print(os.path.join(path, frame_name))
+            # print(os.path.join(path, frame_name))
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             images.append(image)
 
-        print("Images of frame ", frame, " retrieved.")
+        # print("Images of frame ", frame, " retrieved.")
         return np.array(images)
     
     def get_person_ids(self) -> np.ndarray:
@@ -839,7 +839,7 @@ class BAM:
 
         annotations = []
         for frame in range(self.get_total_frames()):
-            annotated, real_frame, next_frame = self._get_real_frame(frame)
+            annotated, real_frame, next_frame = self.get_real_frame(frame)
             if annotated:
                 for a in original_objects[real_frame]:
                     if a[id_type] == object_id and a['type'] in obj_types and len(a['location']) != 0:
@@ -883,7 +883,7 @@ class BAM:
         """
         annotations = []
         for frame in range(self.get_total_frames()):
-            annotated, real_frame, next_frame = self._get_real_frame(frame)
+            annotated, real_frame, next_frame = self.get_real_frame(frame)
             if annotated:
                 for a in self.persons[real_frame]:
                     if a['pid'] == person_id and a['type'] == obj_type and len(a['location']) != 0:
