@@ -254,6 +254,26 @@ Contains:
 
 ## Data structure
 
+The dataset folder has the following structure:
+
+- **dataset/**
+  - **cameras/**
+    - camera00.json
+    - ...  
+    - camera11.json
+  - **<dataset_name>_unroll.json**
+  - **dataset.json**
+  - **<dataset_name>_00.mp4**
+  - ...
+  - **<dataset_name>_11.mp4**
+  - **videos/**
+    - camera00/
+      - frame000000001.png
+      - ... 
+    - ...
+    - camera01/ 
+
+
 #### Cameras folder
 It contains 12 json files, *cameraXX.json*, with the camera parameters for each camera.
 ```
