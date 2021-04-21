@@ -102,10 +102,32 @@ class Camera():
 
             # Project all the points in the camera if points_to_interpolate is not empty
             if points_to_interpolate.size != 0:
-                pts2d, _ = cv2.projectPoints(points_to_interpolate,
-                                             self.rvec,
-                                             self.tvec,
-                                             self.K, self.distCoef)
+                batch_size = 1000000    
+                if (points_to_interpolate.size > batch_size):
+                    # Create batches
+                    num_batches = int(points_to_interpolate.size / batch_size)
+                    last_batch_length = points_to_interpolate.size % batch_size
+
+                    pts2d = []                    
+                    for i in range(num_batches):
+                        indices = range(i*batch_size,i*batch_size + batch_size)
+
+                        batch = np.take(points_to_interpolate, indices, axis=0)   
+                        pts2d_batch, _ = cv2.projectPoints(batch, self.rvec, self.tvec, self.K, self.distCoef)
+                        pts2d.append(pts2d_batch)
+
+                    if last_batch_length > 0:
+                        indices = range(num_batches*batch_size,num_batches*batch_size + last_batch_length)
+                        batch = np.take(points_to_interpolate, indices, axis=0)  
+                        pts2d_batch, _ = cv2.projectPoints(batch, self.rvec, self.tvec, self.K, self.distCoef)
+                        pts2d.append(pts2d_batch)
+
+                    pts2d = np.concatenate(pts2d, axis=0)
+                else:
+                    pts2d, _ = cv2.projectPoints(points_to_interpolate,
+                                                self.rvec,
+                                                self.tvec,
+                                                self.K, self.distCoef)
             else:
                 pts2d = np.array([])
 
