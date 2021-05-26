@@ -32,7 +32,7 @@ class BAM:
         assert os.path.isdir(self.dataset_dir), "The dataset directory %r does not exist" % dataset_dir
         assert os.path.isdir(self.cameras_dir), "The dataset is not complete, cameras information is missing"
 
-        assert image_format in ['png', 'jpeg'], "The image format should be png or jpeg"
+        assert image_format in ['png', 'jpeg', 'jpg'], "The image format should be png, jpg or jpeg"
         self.image_format = image_format
 
         self.num_cameras, self.num_frames = self._read_dataset_info()
