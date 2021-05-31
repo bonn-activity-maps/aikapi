@@ -38,7 +38,7 @@ print(bam.get_static_object_ids())
 # print(bam.get_activity_names())
 
 # print(bam.get_annotations_for_person(19))
-print(bam.get_persons_in_frame(1000))
+# print(bam.get_persons_in_frame(1000))
 # p = bam.get_annotations_for_person(1)
 # print(p)
 
@@ -46,4 +46,8 @@ print(bam.get_persons_in_frame(1000))
 # print(bam.get_static_objects_in_frame(2))
 # print(bam.get_static_object_in_frame(3, 21))
 # print(bam.get_annotations_for_static_object(21))
+
+bam.extract_2d_poses('181126_2d')
+print(bam.get_2d_poses(2239, 0))
+
 

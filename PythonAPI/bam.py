@@ -9,6 +9,7 @@ import shutil
 from scipy.spatial.transform import Rotation as R
 from typing import Optional, Tuple, Union, List, TypeVar
 from PythonAPI.utils.camera import Camera
+import zipfile
 
 kp = TypeVar('kp', float, float, float)
 
@@ -27,6 +28,7 @@ class BAM:
         self.dataset_dir = os.path.join(dataset_dir, self.dataset_name)
         self.cameras_dir = os.path.join(self.dataset_dir, 'cameras')
         self.videos_dir = os.path.join(self.dataset_dir, 'videos')
+        self.poses_dir = os.path.join(self.dataset_dir, 'poses')
 
         # Check if dataset exists in the directory
         assert os.path.isdir(self.dataset_dir), "The dataset directory %r does not exist" % dataset_dir
@@ -914,3 +916,57 @@ class BAM:
                     annotations.append(person_json)
         return np.array(annotations)
 
+    def extract_2d_poses(self, file_name: str, force: bool = False) -> None:
+        """
+            Extracts 2d poses from folder_name folder into poses folder.
+        :param file_name: name of the zip file that contains the 2d data
+        :param force: if True, the folder poses will be overwritten
+        """
+        folder_dir = os.path.join(self.dataset_dir, file_name + '.zip')
+
+        # Extract zip in dataset dir only if is has not been extracted before or if it has to ver overwritten
+        if os.path.exists(self.poses_dir) and not force:
+            print("The poses folder already exists. If you want to unroll them again and overwrite the current poses, "
+                  "please use the option force=True")
+        else:
+            print('Extracting 2d poses...')
+            with zipfile.ZipFile(folder_dir, 'r') as zip_ref:
+                zip_ref.extractall(self.dataset_dir)
+            print('Finish extracting 2d poses')
+
+    def get_2d_poses(self, frame: int, camera: int) -> np.ndarray:
+        """
+            Get 2d poses for frame and camera from poses directory.
+        :param frame: frame number
+        :param camera: number of camera
+        :returns: numpy with all poses for frame and camera and scores for each joint in 3rd coord
+        """
+        poses = self._get_2d_data_by_type(frame, camera, 'poses')
+        if frame in poses:
+            return np.asarray(poses[frame])
+        else:
+            return np.array([])
+
+    def _get_2d_data_by_type(self, frame: int, camera: int, obj_type: str) -> dict:
+        """
+            Get 2d data, poses or bboxes, for camera and frame from poses directory.
+        :param frame: frame number
+        :param camera: number of camera
+        :param obj_type: 'poses' or 'bb', poses or bbox info
+        :returns: Json with all poses or bboxes {frame: [poses/bb], ... }
+        """
+        camera_dir = os.path.join(self.poses_dir, 'camera' + str(camera).zfill(2))
+        poses_json = {}
+
+        annotated, real_frame, next_frame = self.get_real_frame(frame)
+
+        # if the pose file exists, just read the file
+        if annotated:
+            frame_file = os.path.join(camera_dir, 'frame' + str(real_frame).zfill(9) + '.' + obj_type)
+            if not os.path.isfile(frame_file):
+                print('WARNING:', obj_type, 'file for frame', frame, 'is missing')
+                # continue
+            else:
+                f = open(frame_file)
+                poses_json[frame] = json.load(f)
+        return poses_json
