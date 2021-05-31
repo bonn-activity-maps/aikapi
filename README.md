@@ -150,6 +150,34 @@ Calculates the distance vector between a point and a static object's closest poi
   - **point**: (*numpy*) point for which we want to calculate the distance to.
 - **Returns**:
   - (*numpy*) numpy array representing the minimum distance between the point and the object (the vector is the direction and its module the distance magnitude). If the point lies inside of the object it returns [0,0,0].
+___
+#### extract_2d_poses(file_name, force=False)
+Extracts 2d poses from folder_name folder into poses folder.
+The zip file has to be located in the dataset folder.
+- **Parameters**:
+  - **file_name**: (*String*) name of the zip file that contains the 2d data.
+  - **force**: (*Boolean*) if True, the folder poses will be overwritten
+___
+#### get_2d_poses(frame, camera)
+Gets 2d poses for frame and camera from poses directory.
+- **Parameters**:
+  - **frame**: (*Integer*) name of the zip file that contains the 2d data.
+  - **camera**: (*Integer*) if True, the folder poses will be overwritten
+- **Returns**:
+  - (*numpy*) all poses for frame and camera and scores for each joint in the 3rd coordinate 
+```
+[
+  [
+    [x, y, score],
+    ... 
+    (17 joints)
+  ],
+  ...
+  (X poses in each frame)
+]
+    
+```
+
 
 ## Camera class functions
 #### get_C()
@@ -272,6 +300,13 @@ The dataset folder has the following structure:
       - ... 
     - ...
     - camera01/ 
+  - **dataset_2d.zip**
+  - **poses**/
+    - camera00/
+      - frame000000001.poses
+      - ... 
+    - ...
+    - camera01/ 
 
 
 #### Cameras folder
@@ -319,6 +354,15 @@ It contains relevant information about the dataset.
 #### Videos folder
 It is created when the videos are unrolled and contains 12 folders, *cameraXX*, with the corresponding frames for each camera.
 
+#### Dataset_2d.zip
+It contains the *poses* folder with 2d poses for each camera and frame.
+
+#### Poses folder
+The 2d data from dataset_2d.zip is extracted in this folder.
+It contains 12 folders, *cameraXX*, with the corresponding poses for each frame.
+Each file contains a numpy array with X poses for different persons and each pose has 17 joints [x, y, score] with:
+- x and y coordinates of the joint position
+- score for the joint prediction
 
 ## Examples
 For examples of how to use the API you can check the Jupyter Notebook [`test_api.ipynb`](https://github.com/bonn-activity-maps/aikapi/blob/master/test_api.ipynb) provided inside the repository.
