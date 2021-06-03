@@ -19,6 +19,7 @@ class Camera():
         self.tvec = np.float32(tvec)
         self.distCoef = np.float32(distCoef)
         self.P = Geometry.get_projection_matrix(K_new, rvec, tvec)
+        self.R = cv2.Rodrigues(self.rvec)[0]
         self.w = w
         self.h = h
         self.cid = cid
@@ -27,7 +28,7 @@ class Camera():
         """
         :return: (x, y, z) of the camera center in world coordinates
         """
-        R = cv2.Rodrigues(self.rvec)[0]
+        R = self.R
         tvec = self.tvec
         return -np.transpose(R) @ tvec
 
