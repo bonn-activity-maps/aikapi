@@ -104,10 +104,10 @@ class Camera():
             # Project all the points in the camera if points_to_interpolate is not empty
             if points_to_interpolate.size != 0:
                 batch_size = 1000000    
-                if (points_to_interpolate.size > batch_size):
+                if len(points_to_interpolate) > batch_size:
                     # Create batches
-                    num_batches = int(points_to_interpolate.size / batch_size)
-                    last_batch_length = points_to_interpolate.size % batch_size
+                    num_batches = int(len(points_to_interpolate) / batch_size)
+                    last_batch_length = len(points_to_interpolate) % batch_size
 
                     pts2d = []                    
                     for i in range(num_batches):
