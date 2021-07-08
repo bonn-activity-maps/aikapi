@@ -79,6 +79,13 @@ class BAM:
         :param video: if None all videos are unrolled.
                       If it has a concrete value, only that video is unrolled
         """
+        # LEGACY move videos from paper-location to code-location
+        for c in range(self.num_cameras):
+            paper_location = os.path.join(self.videos_dir, "camera"+str(c).zfill(2),"recording.mp4")
+            if os.path.isfile(paper_location):
+                code_location = os.path.join(self.dataset_dir, self.dataset_name + '_' + str(c).zfill(2) + '.mp4')
+                os.rename(paper_location, code_location)
+
         # Remove folders
         if force:
             if video is None:   # remove videos folder
