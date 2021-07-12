@@ -10,13 +10,14 @@ from scipy.spatial.transform import Rotation as R
 from typing import Optional, Tuple, Union, List, TypeVar
 from PythonAPI.utils.camera import Camera
 import zipfile
+import pathlib
 
 kp = TypeVar('kp', float, float, float)
 
 
 class BAM:
 
-    def __init__(self, dataset_dir: str, dataset_name: str, image_format: str = 'png') -> None:
+    def __init__(self, dataset_dir: str, dataset_name: str, image_format: str = 'png', caching: bool = True) -> None:
         """
             Constructor for BAM class for reading and visualizing annotations.
 
@@ -34,6 +35,11 @@ class BAM:
         assert os.path.isdir(self.dataset_dir), "The dataset directory %r does not exist" % dataset_dir
         assert os.path.isdir(self.cameras_dir), "The dataset is not complete, cameras information is missing"
 
+        # Path to store cached data
+        self.cache_path = os.path.join(os.getcwd(), 'tmp/' + self.dataset_name)
+        if not os.path.exists(self.cache_path):
+            os.makedirs(self.cache_path)
+
         assert image_format in ['png', 'jpeg', 'jpg'], "The image format should be png, jpg or jpeg"
         self.image_format = image_format
 
@@ -41,8 +47,9 @@ class BAM:
         self.frame_format = "frame%09d"
         self.max_persons = 50
 
-        # Load info to memory
         self.calibration_params = self._read_calibration_params()
+
+        # Load info to memory
         self.persons, self.objects, self.activities, self.person_ids, self.object_ids, self.activity_names = \
             self._read_annotations()
 
@@ -184,21 +191,47 @@ class BAM:
         :returns: Persons, objects, activities and ids numpy arrays with information in json format
         """
         print('Loading annotations...')
-        with open(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json')) as f:
-            # Read file by line: persons, objects, actions
-            for i, json_obj in enumerate(f):
-                json_data = json.loads(json_obj)
+        
+        # Get last modified timestamp of the cache path
+        cache_path = pathlib.Path(self.cache_path)
+        cache_timestamp = cache_path.stat().st_mtime
 
-                # Process and separate data into persons, objects and activities
-                if i == 0:
-                    persons, person_ids = self._process_persons(json_data['persons'])
-                elif i == 1:
-                    objects, object_ids = self._process_objects(json_data['objects'])
-                elif i == 2:
-                    activities, activity_names = self._process_activities(json_data['actions'])
-                else:
-                    print('Incorrect format in annotation file')
-                    exit()
+        data_path = pathlib.Path(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json'))
+        data_timestamp = data_path.stat().st_mtime
+
+        # If the data is newer than the cached data, we have to update it. Else we take the cached data
+        if data_timestamp > cache_timestamp:
+            with open(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json')) as f:
+                # Read file by line: persons, objects, actions
+                for i, json_obj in enumerate(f):
+                    json_data = json.loads(json_obj)
+
+                    # Process and separate data into persons, objects and activities
+                    if i == 0:
+                        persons, person_ids = self._process_persons(json_data['persons'])
+                    elif i == 1:
+                        objects, object_ids = self._process_objects(json_data['objects'])
+                    elif i == 2:
+                        activities, activity_names = self._process_activities(json_data['actions'])
+                    else:
+                        print('Incorrect format in annotation file')
+                        exit()
+                    
+                # Update cached files
+                np.save(os.path.join(cache_path, 'persons.npy'), persons)
+                np.save(os.path.join(cache_path, 'person_ids.npy'), person_ids)
+                np.save(os.path.join(cache_path, 'objects.npy'), objects)
+                np.save(os.path.join(cache_path, 'object_ids.npy'), object_ids)
+                np.save(os.path.join(cache_path, 'activities.npy'), activities)
+                np.save(os.path.join(cache_path, 'activity_names.npy'), activity_names)
+        else:
+            persons = np.load(os.path.join(cache_path, 'persons.npy'))
+            person_ids = np.load(os.path.join(cache_path, 'person_ids.npy'))
+            objects = np.load(os.path.join(cache_path, 'objects.npy'))
+            object_ids = np.load(os.path.join(cache_path, 'object_ids.npy'))
+            activities = np.load(os.path.join(cache_path, 'activities.npy'))
+            activity_names = np.load(os.path.join(cache_path, 'activity_names.npy'))
+        
         return persons, objects, activities, person_ids, object_ids, activity_names
 
     def _process_persons(self, persons_json: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
