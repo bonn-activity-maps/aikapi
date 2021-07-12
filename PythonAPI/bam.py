@@ -196,11 +196,13 @@ class BAM:
         cache_path = pathlib.Path(self.cache_path)
         cache_timestamp = cache_path.stat().st_mtime
 
+        is_empty = not any(cache_path.iterdir())
+
         data_path = pathlib.Path(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json'))
         data_timestamp = data_path.stat().st_mtime
 
         # If the data is newer than the cached data, we have to update it. Else we take the cached data
-        if data_timestamp > cache_timestamp:
+        if is_empty or (data_timestamp > cache_timestamp):
             with open(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json')) as f:
                 # Read file by line: persons, objects, actions
                 for i, json_obj in enumerate(f):
