@@ -31,14 +31,17 @@ class BAM:
         self.videos_dir = os.path.join(self.dataset_dir, 'videos')
         self.poses_dir = os.path.join(self.dataset_dir, 'poses')
 
+        self.caching = caching
+
         # Check if dataset exists in the directory
         assert os.path.isdir(self.dataset_dir), "The dataset directory %r does not exist" % dataset_dir
         assert os.path.isdir(self.cameras_dir), "The dataset is not complete, cameras information is missing"
 
         # Path to store cached data
-        self.cache_path = os.path.join(os.getcwd(), 'tmp/' + self.dataset_name)
-        if not os.path.exists(self.cache_path):
-            os.makedirs(self.cache_path)
+        if self.caching:
+            self.cache_path = os.path.join(os.getcwd(), '/tmp' + self.dataset_name)
+            if not os.path.exists(self.cache_path):
+                os.makedirs(self.cache_path)
 
         assert image_format in ['png', 'jpeg', 'jpg'], "The image format should be png, jpg or jpeg"
         self.image_format = image_format
@@ -192,17 +195,49 @@ class BAM:
         """
         print('Loading annotations...')
         
-        # Get last modified timestamp of the cache path
-        cache_path = pathlib.Path(self.cache_path)
-        cache_timestamp = cache_path.stat().st_mtime
+        if self.caching:
+            # Get last modified timestamp of the cache path
+            cache_path = pathlib.Path(self.cache_path)
+            cache_timestamp = cache_path.stat().st_mtime
 
-        is_empty = not any(cache_path.iterdir())
+            is_empty = not any(cache_path.iterdir())
 
-        data_path = pathlib.Path(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json'))
-        data_timestamp = data_path.stat().st_mtime
+            data_path = pathlib.Path(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json'))
+            data_timestamp = data_path.stat().st_mtime
 
-        # If the data is newer than the cached data, we have to update it. Else we take the cached data
-        if is_empty or (data_timestamp > cache_timestamp):
+            # If the data is newer than the cached data, we have to update it. Else we take the cached data
+            if is_empty or (data_timestamp > cache_timestamp):
+                with open(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json')) as f:
+                    # Read file by line: persons, objects, actions
+                    for i, json_obj in enumerate(f):
+                        json_data = json.loads(json_obj)
+
+                        # Process and separate data into persons, objects and activities
+                        if i == 0:
+                            persons, person_ids = self._process_persons(json_data['persons'])
+                        elif i == 1:
+                            objects, object_ids = self._process_objects(json_data['objects'])
+                        elif i == 2:
+                            activities, activity_names = self._process_activities(json_data['actions'])
+                        else:
+                            print('Incorrect format in annotation file')
+                            exit()
+                        
+                    # Update cached files
+                    np.save(os.path.join(cache_path, 'persons.npy'), persons)
+                    np.save(os.path.join(cache_path, 'person_ids.npy'), person_ids)
+                    np.save(os.path.join(cache_path, 'objects.npy'), objects)
+                    np.save(os.path.join(cache_path, 'object_ids.npy'), object_ids)
+                    np.save(os.path.join(cache_path, 'activities.npy'), activities)
+                    np.save(os.path.join(cache_path, 'activity_names.npy'), activity_names)
+            else:
+                persons = np.load(os.path.join(cache_path, 'persons.npy'), allow_pickle=True)
+                person_ids = np.load(os.path.join(cache_path, 'person_ids.npy'), allow_pickle=True)
+                objects = np.load(os.path.join(cache_path, 'objects.npy'), allow_pickle=True)
+                object_ids = np.load(os.path.join(cache_path, 'object_ids.npy'), allow_pickle=True)
+                activities = np.load(os.path.join(cache_path, 'activities.npy'), allow_pickle=True)
+                activity_names = np.load(os.path.join(cache_path, 'activity_names.npy'), allow_pickle=True)
+        else:
             with open(os.path.join(self.dataset_dir, self.dataset_name + '_unroll.json')) as f:
                 # Read file by line: persons, objects, actions
                 for i, json_obj in enumerate(f):
@@ -218,22 +253,7 @@ class BAM:
                     else:
                         print('Incorrect format in annotation file')
                         exit()
-                    
-                # Update cached files
-                np.save(os.path.join(cache_path, 'persons.npy'), persons)
-                np.save(os.path.join(cache_path, 'person_ids.npy'), person_ids)
-                np.save(os.path.join(cache_path, 'objects.npy'), objects)
-                np.save(os.path.join(cache_path, 'object_ids.npy'), object_ids)
-                np.save(os.path.join(cache_path, 'activities.npy'), activities)
-                np.save(os.path.join(cache_path, 'activity_names.npy'), activity_names)
-        else:
-            persons = np.load(os.path.join(cache_path, 'persons.npy'), allow_pickle=True)
-            person_ids = np.load(os.path.join(cache_path, 'person_ids.npy'), allow_pickle=True)
-            objects = np.load(os.path.join(cache_path, 'objects.npy'), allow_pickle=True)
-            object_ids = np.load(os.path.join(cache_path, 'object_ids.npy'), allow_pickle=True)
-            activities = np.load(os.path.join(cache_path, 'activities.npy'), allow_pickle=True)
-            activity_names = np.load(os.path.join(cache_path, 'activity_names.npy'), allow_pickle=True)
-        
+
         return persons, objects, activities, person_ids, object_ids, activity_names
 
     def _process_persons(self, persons_json: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
