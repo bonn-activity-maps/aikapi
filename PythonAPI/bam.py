@@ -227,12 +227,12 @@ class BAM:
                 np.save(os.path.join(cache_path, 'activities.npy'), activities)
                 np.save(os.path.join(cache_path, 'activity_names.npy'), activity_names)
         else:
-            persons = np.load(os.path.join(cache_path, 'persons.npy'))
-            person_ids = np.load(os.path.join(cache_path, 'person_ids.npy'))
-            objects = np.load(os.path.join(cache_path, 'objects.npy'))
-            object_ids = np.load(os.path.join(cache_path, 'object_ids.npy'))
-            activities = np.load(os.path.join(cache_path, 'activities.npy'))
-            activity_names = np.load(os.path.join(cache_path, 'activity_names.npy'))
+            persons = np.load(os.path.join(cache_path, 'persons.npy'), allow_pickle=True)
+            person_ids = np.load(os.path.join(cache_path, 'person_ids.npy'), allow_pickle=True)
+            objects = np.load(os.path.join(cache_path, 'objects.npy'), allow_pickle=True)
+            object_ids = np.load(os.path.join(cache_path, 'object_ids.npy'), allow_pickle=True)
+            activities = np.load(os.path.join(cache_path, 'activities.npy'), allow_pickle=True)
+            activity_names = np.load(os.path.join(cache_path, 'activity_names.npy'), allow_pickle=True)
         
         return persons, objects, activities, person_ids, object_ids, activity_names
 
