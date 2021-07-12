@@ -39,9 +39,13 @@ class BAM:
 
         # Path to store cached data
         if self.caching:
-            self.cache_path = os.path.join(os.getcwd(), '/tmp' + self.dataset_name)
+            self.cache_path = os.path.join(os.getcwd(), '/tmp/' + self.dataset_name)
             if not os.path.exists(self.cache_path):
-                os.makedirs(self.cache_path)
+                try:
+                    original_umask = os.umask(0)
+                    os.makedirs(self.cache_path, mode=0o0777)
+                finally:
+                    os.umask(original_umask)
 
         assert image_format in ['png', 'jpeg', 'jpg'], "The image format should be png, jpg or jpeg"
         self.image_format = image_format
