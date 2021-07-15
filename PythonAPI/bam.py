@@ -17,13 +17,16 @@ kp = TypeVar('kp', float, float, float)
 
 class BAM:
 
-    def __init__(self, dataset_dir: str, dataset_name: str, image_format: str = 'png', caching: bool = True) -> None:
+    def __init__(self, dataset_dir: str, dataset_name: str, image_format: str = 'png', caching: bool = True,
+                 half_resolution: bool = False) -> None:
         """
             Constructor for BAM class for reading and visualizing annotations.
 
         :param dataset_dir: absolute path to the folder containing the datasets
         :param dataset_name: name of the dataset folder
         :param image_format: format of images to extract video frames, png or jpeg (png by default)
+        :param caching: caching data if flag is True
+        :param half_resolution: use data annotation time resolution when this flag is True
         """
         self.dataset_name = dataset_name
         self.dataset_dir = os.path.join(dataset_dir, self.dataset_name)
@@ -32,6 +35,7 @@ class BAM:
         self.poses_dir = os.path.join(self.dataset_dir, 'poses')
 
         self.caching = caching
+        self.half_resolution = half_resolution
 
         # Check if dataset exists in the directory
         assert os.path.isdir(self.dataset_dir), "The dataset directory %r does not exist" % dataset_dir
@@ -156,12 +160,20 @@ class BAM:
         # num_frames = data['valid_frames'][-1] * 2
 
         # Total frames, for now.. --> Horrible hardcoding but necessary, please change it in the future!
-        total_frames = {
-            '181129': 64862 * 2 - 1,
-            '190502': 89585 * 2,
-            '190719': 87778 * 2,
-            '190726': 88819 * 2,
-        }
+        if self.half_resolution:
+            total_frames = {
+                '181129': 64862,
+                '190502': 89585,
+                '190719': 87778,
+                '190726': 88819,
+            }
+        else:
+            total_frames = {
+                '181129': 64862 * 2 - 1,
+                '190502': 89585 * 2,
+                '190719': 87778 * 2,
+                '190726': 88819 * 2,
+            }
         return data['n_cameras'], total_frames[self.dataset_name]
 
     def _read_calibration_params(self) -> np.ndarray:
@@ -370,6 +382,10 @@ class BAM:
                 The real frame if it is stored in the dataset
                 The previous and posterior frames if the information about that frame is not stored
         """
+        # if we use half resolution -> the frame is correct as it is
+        if self.half_resolution:
+            return True, frame, -1
+
         # Even -> the frame info is not contained in the dataset
         if (frame % 2) == 0:
             real_frame = frame//2
@@ -386,8 +402,12 @@ class BAM:
         :returns: calibration parameters in json format with K, rvec, tvec, distCoef, w and h
         """
         for p in self.calibration_params[video]:
-            start_frame = p['start_frame'] * 2 - 1
-            end_frame = p['end_frame'] * 2 - 1
+            if self.half_resolution:
+                start_frame = p['start_frame']
+                end_frame = p['end_frame']
+            else:
+                start_frame = p['start_frame'] * 2 - 1
+                end_frame = p['end_frame'] * 2 - 1
             if start_frame <= frame <= end_frame:
                 new_params = p.copy()
                 new_params['start_frame'] = start_frame
@@ -591,8 +611,12 @@ class BAM:
         activities = []
         for a in self.activities[pid]:
             new_activity = a.copy()
-            new_activity['start_frame'] = new_activity['start_frame'] * 2 - 1
-            new_activity['end_frame'] = new_activity['end_frame'] * 2 - 1
+            if self.half_resolution:
+                new_activity['start_frame'] = new_activity['start_frame']
+                new_activity['end_frame'] = new_activity['end_frame']
+            else:
+                new_activity['start_frame'] = new_activity['start_frame'] * 2 - 1
+                new_activity['end_frame'] = new_activity['end_frame'] * 2 - 1
             activities.append(new_activity)
         return np.array(activities)
 
@@ -611,7 +635,7 @@ class BAM:
         # print("Searching for images of frame ", frame, "...")
         # Create the string of the name of the frame that we are going to search for in all camera folders
         frame_name = "frame" + ''.zfill(9)
-        frame_string = str(frame)
+        frame_string = str(frame*2-1) if self.half_resolution else str(frame)
         number_of_chars = len(frame_string)
         frame_name = frame_name[:-number_of_chars] + frame_string + "." + self.image_format
         
