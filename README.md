@@ -17,6 +17,7 @@ Constructor for the BAM class used to perform all actions over the dataset.
   - **datset_dir**: (*String*) path to the folder containing the datasets.
   - **dataset_name**: (*String*) name of the dataset folder.
   - **image_format**: (*String, Optional*) format wanted for the image extraction. "png"/"jpeg". *default*=`"png"`
+  - **half_resolution**: (*Boolean*) True if you want to use the data annotation time resolution. *default*=`"False"`
 - **Returns**:
   - (*BAM Object*) object to perform operations over the dataset
 ___
