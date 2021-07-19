@@ -8,7 +8,7 @@ import cv2
 import shutil
 from scipy.spatial.transform import Rotation as R
 from typing import Optional, Tuple, Union, List, TypeVar
-from PythonAPI.utils.camera import Camera
+from aikapi.utils.camera import Camera
 import zipfile
 import pathlib
 
