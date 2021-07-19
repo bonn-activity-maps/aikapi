@@ -1,4 +1,4 @@
-from PythonAPI.bam import BAM
+from aikapi.bam import BAM
 import numpy as np
 
 
