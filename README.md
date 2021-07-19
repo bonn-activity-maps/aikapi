@@ -5,10 +5,13 @@ This project contains the API to load and interact with **Bonn Activity Maps** d
 - The framerate of the videos is 25 Hz.
 
 ## Installation
-
-1. Clone or download the repository.
+Using pip: 
+```
+pip3 install git+https://github.com/bonn-activity-maps/aikapi
+```
+ or 
+1. Clone the repository: `git clone https://github.com/bonn-activity-maps/aikapi.git`
 2. Install the required Python3 packages with: `pip3 install -r requirements.txt`
-3. Place the BAM dataset folders at the same level as **PythonAPI** folder.
 
 ## BAM class functions
 #### BAM(dataset_dir, dataset_name, image_format)
